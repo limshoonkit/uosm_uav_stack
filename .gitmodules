@@ -1,3 +1,16 @@
 [submodule "src/third_party/acados_vendor_ros2"]
 	path = src/third_party/acados_vendor_ros2
 	url = https://github.com/ICube-Robotics/acados_vendor_ros2.git
+
+[submodule "src/perception_module/sllidar_ros2"]
+	path = src/perception_module/sllidar_ros2
+	url = https://github.com/limshoonkit/sllidar_ros2
+	branch = main
+
+[submodule "src/perception_module/zed-ros2-wrapper"]
+	path = src/perception_module/zed-ros2-wrapper
+	url = https://github.com/stereolabs/zed-ros2-wrapper
+
+[submodule "src/third_party/ros2_jetson_stats"]
+	path = src/third_party/ros2_jetson_stats
+	url = https://github.com/NVIDIA-AI-IOT/ros2_jetson_stats

@@ -139,24 +139,21 @@ def generate_launch_description():
         extra_arguments=[{'use_intra_process_comms': True}]
     )
 
-    # Perception component
+    # Odom republisher: transforms VIO odom from camera frame -> base_link
     perception_component = ComposableNode(
-        package='msf_ros2',
+        package='odom_republisher',
         namespace='',
-        plugin='uosm::perception::MultiSensorFusion',
-        name='msf_node',
-        parameters=[
-            {"odom_frame": "odom"},
-            {"base_frame": "base_link"},
-            {"camera_frame": "zedm_camera_link"},
-            {"window_size": 10},
-            {"publish_rate": 30.0},
-            {"buffer_max_size": 10},
-            {"broadcast_tf": True},
-        ],
+        plugin='uosm::perception::OdomRepublisher',
+        name='odom_republisher_node',
+        parameters=[{
+            'odom_frame': 'odom',
+            'base_frame': 'base_link',
+            'camera_frame': 'zedm_camera_link',
+            'broadcast_tf': True,
+        }],
         remappings=[
-            ('vio/odom', '/zed_node/odom'),
-            ('fused/odom', '/mavros/odometry/out')
+            ('/vio/odom', '/zed_node/odom'),
+            ('/odom/out', '/mavros/odometry/out'),
         ],
         extra_arguments=[{'use_intra_process_comms': True}]
     )

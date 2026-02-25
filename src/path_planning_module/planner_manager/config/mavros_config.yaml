@@ -71,10 +71,10 @@
   ros__parameters:
     frame_id: "odom"              # origin frame
     tf:
-      send: true                  # Broadcast TF
-      frame_id: "odom"            # Parent frame is odom
-      child_frame_id: "base_link" # Child frame is base_link
-      send_fcu: false             # Keep disabled
+      send: false                 # Disabled: odom_republisher owns odom -> base_link TF
+      frame_id: "odom"
+      child_frame_id: "base_link"
+      send_fcu: false
 
 # param
 # None, used for FCU params

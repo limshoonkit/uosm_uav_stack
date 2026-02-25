@@ -11,21 +11,19 @@ from ament_index_python.packages import get_package_share_directory
 # Enable colored output
 os.environ["RCUTILS_COLORIZED_OUTPUT"] = "1"
 
-# DDS and Zenoh config paths via ament package share directory
+# DDS config path via ament package share directory
 _DDS_CONFIG_DIR = os.path.join(
     get_package_share_directory('uosm_uav_bringup'), 'config', 'dds'
 )
 CYCLONEDDS_URI_PATH = os.path.join(_DDS_CONFIG_DIR, 'cyclonedds_device.xml')
-ZENOH_BRIDGE_CONFIG_PATH = os.path.join(_DDS_CONFIG_DIR, 'zenoh_bridge_device.json5')
 
-def generate_launch_description():    
+def generate_launch_description():
     # LaunchConfiguration
     use_mavros = LaunchConfiguration('use_mavros')
     use_rosbag = LaunchConfiguration('use_rosbag')
     bag_output_path = LaunchConfiguration('bag_output_path')
     rosbag_delay = LaunchConfiguration('rosbag_delay')
-    use_zenoh_bridge = LaunchConfiguration('use_zenoh_bridge')
-
+    use_foxglove = LaunchConfiguration('use_foxglove')
 
     # Declare launch argument to enable MAVROS
     use_mavros_arg = DeclareLaunchArgument(
@@ -46,7 +44,7 @@ def generate_launch_description():
     # Declare launch argument for bag output path
     bag_output_path_arg = DeclareLaunchArgument(
         'bag_output_path',
-        default_value='bags/test1', # relative
+        default_value='bags/real/test1', # relative
         description='Output directory for ROS2 bag files'
     )
 
@@ -57,15 +55,15 @@ def generate_launch_description():
         description='Delay in seconds before starting rosbag recording (wait for sensors)'
     )
 
-    # Declare launch argument to enable Zenoh bridge
-    use_zenoh_bridge_arg = DeclareLaunchArgument(
-        'use_zenoh_bridge',
+    # Declare launch argument to enable Foxglove websocket bridge
+    use_foxglove_arg = DeclareLaunchArgument(
+        'use_foxglove',
         default_value='true',
-        description='Whether to launch Zenoh bridge for cross-network ROS 2 communication',
+        description='Whether to launch Foxglove websocket bridge for visualization',
         choices=['true', 'false']
     )
 
-    #  DDS and Zenoh environment
+    # DDS environment
     set_rmw = SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp')
     set_cyclone_uri = SetEnvironmentVariable(
         'CYCLONEDDS_URI', 'file://' + os.path.realpath(CYCLONEDDS_URI_PATH)
@@ -74,40 +72,17 @@ def generate_launch_description():
     # Configuration paths
     urdf_dir = get_package_share_directory('uosm_robot_viewer')
     urdf_xacro_path = os.path.join(urdf_dir, 'urdf', 'uosm_uav_platform.urdf.xacro')
-    
+
     planner_dir = get_package_share_directory('planner_manager')
     px4_pluginlists_path = os.path.join(planner_dir, 'config', 'mavros_pluginlists.yaml')
     px4_config_path = os.path.join(planner_dir, 'config', 'mavros_config.yaml')
-    
+
     bringup_package = get_package_share_directory('uosm_uav_bringup')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
     mcap_options = os.path.join(bringup_package, 'config', 'mcap_writer_options.yaml')
     qos_overrides = os.path.join(bringup_package, 'config', 'qos_overrides.yaml')
 
-    # Flight controller component
-    sanity_check_component = ComposableNode(
-        package='sanity_check',
-        namespace='',
-        plugin='uosm::path_planning::SanityCheck',
-        name='sanity_check_node',
-        parameters=[{
-            'flight_height': 1.0,
-            'request_timeout': 2.0,
-            'hover_period': 10.0,
-            'preflight_check_timeout': 2.0,
-            'frame_id': 'map',
-            'execution_rate': 50.0,
-            'do_orbit': False,
-            'orbit_radius': 1.0,
-            'orbit_speed': 0.5,
-        }],
-        remappings=[
-            ('/mavros/odometry/out', 'mavros/odometry/out'),
-        ],
-        extra_arguments=[{'use_intra_process_comms': True}]
-    )
-    
     zed_node_parameters = [zed_config_common, zed_config_camera]
 
     # Sensor component
@@ -135,24 +110,21 @@ def generate_launch_description():
         extra_arguments=[{'use_intra_process_comms': True}]
     )
 
-    # Perception component
-    perception_component = ComposableNode(
-        package='msf_ros2',
+    # Odom republisher: transforms VIO odom from camera frame -> base_link
+    odom_republisher_component = ComposableNode(
+        package='odom_republisher',
         namespace='',
-        plugin='uosm::perception::MultiSensorFusion',
-        name='msf_node',
-        parameters=[
-            {"odom_frame": "odom"},
-            {"base_frame": "base_link"},
-            {"camera_frame": "zedm_camera_link"},
-            {"window_size": 10},
-            {"publish_rate": 30.0},
-            {"buffer_max_size": 10},
-            {"broadcast_tf": True},
-        ],
+        plugin='uosm::perception::OdomRepublisher',
+        name='odom_republisher_node',
+        parameters=[{
+            'odom_frame': 'odom',
+            'base_frame': 'base_link',
+            'camera_frame': 'zedm_camera_link',
+            'broadcast_tf': True,
+        }],
         remappings=[
-            ('vio/odom', '/zed_node/odom'),
-            ('fused/odom', '/mavros/odometry/out')
+            ('/vio/odom', '/zed_node/odom'),
+            ('/odom/out', '/mavros/odometry/out'),
         ],
         extra_arguments=[{'use_intra_process_comms': True}]
     )
@@ -167,23 +139,6 @@ def generate_launch_description():
         }]
     )
 
-    # Autonomy stack container
-    autonomy_stack_container = ComposableNodeContainer(
-        name='autonomy_stack_container',
-        namespace='',
-        package='rclcpp_components',
-        executable='component_container',
-        arguments=['--ros-args', '--log-level', 'info'],
-        output='screen',
-        composable_node_descriptions=[
-            # sanity_check_component,
-            zed_component,
-            rplidar_component,
-            perception_component,
-            rsp_component
-        ]
-    )
-    
     jetson_gscam2_dir = get_package_share_directory('jetson_gscam2')
     csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'wide_angle_preset.yaml')
     csi_cam_info_url = 'package://jetson_gscam2/config/camera_calibration.yaml'
@@ -206,16 +161,20 @@ def generate_launch_description():
         extra_arguments=[{'use_intra_process_comms': True}]
     )
 
-    # CSI camera container
-    csi_camera_container = ComposableNodeContainer(
-        name='csi_camera_container',
+    # Autonomy stack container
+    autonomy_stack_container = ComposableNodeContainer(
+        name='autonomy_stack_container',
         namespace='',
         package='rclcpp_components',
         executable='component_container',
         arguments=['--ros-args', '--log-level', 'info'],
         output='screen',
         composable_node_descriptions=[
-            csi_camera_component
+            zed_component,
+            rplidar_component,
+            odom_republisher_component,
+            rsp_component,
+            csi_camera_component,
         ]
     )
 
@@ -268,7 +227,7 @@ def generate_launch_description():
         name='map_to_odom_tf',
         arguments=[
             '--x', '0.0',
-            '--y', '0.0', 
+            '--y', '0.0',
             '--z', '0.0',
             '--roll', '0.0',
             '--pitch', '0.0',
@@ -279,13 +238,16 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Zenoh bridge for cross-network communication
-    zenoh_bridge = ExecuteProcess(
-        condition=IfCondition(use_zenoh_bridge),
-        cmd=[
-            'zenoh-bridge-ros2dds',
-            '-c', os.path.realpath(ZENOH_BRIDGE_CONFIG_PATH),
-        ],
+    # Foxglove websocket bridge for visualization
+    foxglove_bridge = Node(
+        package='foxglove_bridge',
+        executable='foxglove_bridge',
+        name='foxglove_bridge',
+        condition=IfCondition(use_foxglove),
+        parameters=[{
+            'port': 8765,
+            'address': '0.0.0.0',
+        }],
         output='screen',
     )
 
@@ -301,7 +263,7 @@ def generate_launch_description():
             'diagnostics',
             'zed_node/point_cloud/cloud_registered',
             'zed_node/left/color/rect/image',
-            'zed_node/right/color/rect/image', 
+            'zed_node/right/color/rect/image',
             'zed_node/left/color/rect/image/camera_info',
             'zed_node/right/color/rect/image/camera_info',
             'mavros/odometry/out',
@@ -330,16 +292,15 @@ def generate_launch_description():
         use_rosbag_arg,
         bag_output_path_arg,
         rosbag_delay_arg,
-        use_zenoh_bridge_arg,
+        use_foxglove_arg,
 
         # Nodes
         autonomy_stack_container,
-        csi_camera_container,
         mavros_node,
         # wifi_scan_node,
         jsp_node,
         map_to_odom_tf,
         jetson_stats_node,
-        zenoh_bridge,
+        foxglove_bridge,
         rosbag_record,
     ])

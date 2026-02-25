@@ -1,0 +1,48 @@
+trunk_segmentation_node:
+  ros__parameters:
+    # Map and frame configuration
+    map_frame: "map"
+    odom_frame: "odom"
+    robot_frame: "base_link"
+    enable_diagnostics: true
+    
+    # Map filtering parameters
+    map_filter_z_min: 1.0           # Minimum height for map points (meters)
+    map_filter_z_max: 7.0           # Maximum height for map points (meters)
+    max_tilt_deg: 10.0               # Maximum tilt angle for map points (degrees)
+    
+    # Processing parameters
+    submap_search_radius: 15.0      # Radius for local sub-map extraction (meters)
+    clustering_method: 0            # Clustering method: 0=PCL Euclidean, 1=DBSCAN++
+    dbscan_p: 0.1                   # The sample fraction, which determines m, the number of points to sample
+    dbscan_eps_density: 1.0         # Radius for determining core points (meters)
+    dbscan_eps_clustering: 1.0      # Radius for determiheightning neighbors and edges in the density graph
+    dbscan_min_pts: 15              # Minimum points for DBSCAN core point
+    pcl_cluster_tolerance: 0.3      # Cluster tolerance for PCL (meters)
+    pcl_min_cluster_size: 15        # Minimum cluster size for PCL
+    pcl_max_cluster_size: 60        # Maximum cluster size for PCL
+    
+    # Circle fitting parameters
+    circle_fit_method: 2            # Circle fitting method: 0=KASA, 1=HyperLS, 2=PCL Consensus
+    min_radius: 0.25                # Minimum radius for tree construction (meters)
+    max_radius: 0.45                # Maximum radius for tree construction (meters)
+    max_center_distance: 0.35       # Maximum distance from cluster centroid to circle center
+    ransac_distance_threshold: 0.2  # RANSAC inlier distance threshold
+
+    # Association and tracking parameters
+    association_threshold: 0.75           # Distance in meters to associate detections
+    distance_threshold: 7.5               # Distance in meters to prevent creating duplicate tracks for the same object
+    gating_threshold: 6.0                 # Mahalanobis distance threshold for gating
+    min_hit_rate_for_confirmation: 0.3    # Hit rate required to confirm track
+    min_observations_for_confirmation: 5  # Minimum observations before allowing confirmation
+    max_miss_rate_for_lost: 0.8           # Miss rate to mark confirmed track as lost
+    min_observations_for_lost: 8          # Minimum observations before allowing lost transition
+    detection_window_size: 10             # Track last N detection attempts for hit/miss rate calculation
+    process_noise_std: 0.2                # Process noise standard deviation
+    measurement_noise_std: 0.2            # Measurement noise standard deviation
+    radius_tolerance: 0.3                 # Tolerance for radius difference in association
+    radius_penalty_weight: 0.5            # Weight for radius difference in association cost
+    max_lost_tracks: 50                   # Maximum number of lost tracks to keep
+    max_lost_track_age_seconds: 480.0     # Maximum age in seconds for a lost track before pruning
+    lost_track_association_threshold: 1.0 # Distance in meters to associate detections with lost tracks
+    covariance_inflation_factor: 2.0      # Factor to inflate covariance when a track is lost

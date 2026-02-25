@@ -4,14 +4,17 @@
 ## Prerequisites
 
 - **ROS 2 Humble** 
-- **PX4-Autopilot**
-- **MAVROS** (`sudo apt install ros-humble-mavros ros-humble-mavros-extras`)
-- **Foxglove Bridge** (`sudo apt install ros-humble-foxglove-bridge ros-humble-foxglove-msgs`)
-- **System dependencies**: Eigen3, PCL, OpenCV, Armadillo, pkg-config
+- **Jetpack 6.2** / **Ubuntu 22.04 LTS**
 
 ## A. Build
 
 TBD
+
+```bash
+chmod +x ./scripts/setup.sh
+./scripts/setup.sh
+```
+
 ```bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)
 ```

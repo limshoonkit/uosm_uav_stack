@@ -1,0 +1,19 @@
+map_alignment_node:
+  ros__parameters:
+    # Map and frame configuration
+    map_frame: "map"
+    odom_frame: "odom"
+
+    # Map alignment parameters
+    solve_for_scale: true
+    max_initial_guess_xy_deviation: 2.0 # Maximum deviation in meters for initial guess
+    max_scale_deviation: 0.2            # Maximum deviation in scale (e.g., 0.2 = ±20%)
+    association_radius: 1.5             # Radius to search for correspondences (meters)
+    min_correspondences: 3              # Minimum correspondences to accept alignment
+    max_iterations: 30                  # Maximum weighted SVD iterations
+    convergence_threshold: 0.001        # Convergence threshold for SVD
+    voxel_leaf_size: 0.1                # Voxel grid leaf size for downsampling (0 = no downsampling)
+    initial_yaw_rad: 0.0                # Initial guess for yaw rotation (radians)
+    starting_point_x: -5.8              # Initial guess for x translation (meters)
+    starting_point_y: -8.8              # Initial guess for y translation (meters)
+    max_alignment_attempts: 10          # Max attempts before giving up (triggers FC landing via timeout)
