@@ -1,71 +1,46 @@
 #!/usr/bin/env python3
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import ComposableNodeContainer, Node
+
 from launch_ros.descriptions import ComposableNode
 from ament_index_python.packages import get_package_share_directory
 
 # Enable colored output
 os.environ["RCUTILS_COLORIZED_OUTPUT"] = "1"
 
-def generate_launch_description():    
-    # LaunchConfiguration
-    use_mavros = LaunchConfiguration('use_mavros')
-    use_foxglove = LaunchConfiguration('use_foxglove')
-    use_rosbag = LaunchConfiguration('use_rosbag')
-    bag_output_path = LaunchConfiguration('bag_output_path')
+def generate_launch_description():
+    # Use CycloneDDS with default network settings
+    set_rmw = SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp')
 
-    # Declare launch argument to enable MAVROS
-    use_mavros_arg = DeclareLaunchArgument(
-        'use_mavros',
-        default_value='true',
-        description='Whether to launch MAVROS',
-        choices=['true', 'false']
-    )
+    # LaunchConfiguration
+    use_foxglove = LaunchConfiguration('use_foxglove')
 
     # Declare launch argument to enable foxglove
     use_foxglove_arg = DeclareLaunchArgument(
         'use_foxglove',
-        default_value='true',
+        default_value='false',
         description='Whether to launch Foxglove Bridge',
         choices=['true', 'false']
-    )
-
-    # Declare launch argument to enable ROS2 bag recording
-    use_rosbag_arg = DeclareLaunchArgument(
-        'use_rosbag',
-        default_value='false',
-        description='Whether to record ROS2 bag',
-        choices=['true', 'false']
-    )
-
-    # Declare launch argument for bag output path
-    bag_output_path_arg = DeclareLaunchArgument(
-        'bag_output_path',
-        default_value='bags/test1', # relative
-        description='Output directory for ROS2 bag files'
     )
 
     # Configuration paths
     urdf_dir = get_package_share_directory('uosm_robot_viewer')
     urdf_xacro_path = os.path.join(urdf_dir, 'urdf', 'uosm_uav_platform.urdf.xacro')
-    
+
     planner_dir = get_package_share_directory('planner_manager')
     px4_pluginlists_path = os.path.join(planner_dir, 'config', 'mavros_pluginlists.yaml')
     px4_config_path = os.path.join(planner_dir, 'config', 'mavros_config.yaml')
-    
+
     bringup_package = get_package_share_directory('uosm_uav_bringup')
     fc_config = os.path.join(bringup_package, 'config', 'fc.yaml')
     planner_config = os.path.join(bringup_package, 'config', 'planner.yaml')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
-    mcap_options = os.path.join(bringup_package, 'config', 'mcap_writer_options.yaml')
-    qos_overrides = os.path.join(bringup_package, 'config', 'qos_overrides.yaml')
 
-    
     # Flight controller component
     fc_component = ComposableNode(
         package='planner_manager',
@@ -90,29 +65,16 @@ def generate_launch_description():
             planner_config
         ],
         remappings=[
-            ('odometry', "mavros/odometry/out"), # combined odom from sensors
+            ('odometry', "mavros/odometry/out"), # odometry
             ('grid_map/cloud', 'zed_node/point_cloud/cloud_registered'), # point cloud from stereo camera
-            ('grid_map/scan', '/scan') # 2D LiDAR scan for grid map fusion
+            ('grid_map/scan', '/scan'), # 2D LiDAR scan for grid map fusion
+            ('alignment_done', '/map_alignment/alignment_done'),
+            ('alignment_transform', '/map_alignment/alignment_transform'),
         ],
         extra_arguments=[{'use_intra_process_comms': True}]
     )
 
     zed_node_parameters = [zed_config_common, zed_config_camera]
-    # zed_node_parameters.append(
-    #     {
-    #         'zed_node.left.image_rect_color.ffmpeg.encoder': 'h264_nvmpi',
-    #         'zed_node.left.image_rect_color.ffmpeg.gop_size': 10,
-    #         'zed_node.left.image_rect_color.ffmpeg.bit_rate': 2000000,
-    #         'zed_node.left.image_rect_color.ffmpeg.qmax': 10,
-    #         'zed_node.left.image_rect_color.ffmpeg.encoder_av_options': 'profile:main',
-
-    #         'zed_node.right.image_rect_color.ffmpeg.encoder': 'h264_nvmpi',
-    #         'zed_node.right.image_rect_color.ffmpeg.gop_size': 10,
-    #         'zed_node.right.image_rect_color.ffmpeg.bit_rate': 2000000,
-    #         'zed_node.right.image_rect_color.ffmpeg.qmax': 10,
-    #         'zed_node.right.image_rect_color.ffmpeg.encoder_av_options': 'profile:main',
-    #     }
-    # )
 
     # Sensor component
     zed_component = ComposableNode(
@@ -225,7 +187,6 @@ def generate_launch_description():
     mavros_node = Node(
         package='mavros',
         executable='mavros_node',
-        condition=IfCondition(use_mavros),
         parameters=[
             px4_pluginlists_path,
             px4_config_path,
@@ -233,7 +194,7 @@ def generate_launch_description():
                 'fcu_url': '/dev/ttyACM0:2000000',
                 #'fcu_url': '/dev/ttyTHS1:1152000',
                 #'gcs_url': 'udp://@127.0.0.1:14550',
-                'gcs_url': 'udp://@192.168.1.100:14550',
+                'gcs_url': 'udp://@192.168.0.2:14550',
                 'tgt_system': 1,
                 'tgt_component': 1,
                 'fcu_protocol': "v2.0",
@@ -241,7 +202,7 @@ def generate_launch_description():
                 'namespace': "mavros",
             }
         ],
-        arguments=['--ros-args', '--log-level', 'warn']  # 'debug', 'info', 'warn', 'error', 'fatal'
+        arguments=['--ros-args', '--log-level', 'fatal']  # 'debug', 'info', 'warn', 'error', 'fatal'
     )
 
     # Joint State Publisher
@@ -261,19 +222,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             "port": 8765,
-            # Optional: "allowed_origins": ["*"] or specific domains
         }]
-    )
-
-    # Jetson Stats Node
-    jetson_stats_node = Node(
-        package='ros2_jetson_stats',
-        executable='ros2_jtop',
-        name='ros2_jtop',
-        parameters=[
-            {'interval': 1.0} # 0.1 ~ 10Hz max
-        ],
-        output='screen',
     )
 
     map_to_odom_tf = Node(
@@ -282,7 +231,7 @@ def generate_launch_description():
         name='map_to_odom_tf',
         arguments=[
             '--x', '0.0',
-            '--y', '0.0', 
+            '--y', '0.0',
             '--z', '0.0',
             '--roll', '0.0',
             '--pitch', '0.0',
@@ -293,44 +242,18 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ROS2 bag recording
-    rosbag_record = ExecuteProcess(
-        condition=IfCondition(use_rosbag),
-        cmd=[
-            'ros2', 'bag', 'record',
-            '-o', bag_output_path,
-            '--storage', 'mcap', # mcap, sqlite3
-            '--storage-config-file', mcap_options,
-            '--qos-profile-overrides-path', qos_overrides,
-            # add topics
-            'diagnostics',
-            'ego_planner/poly_traj',
-            'zed_node/point_cloud/cloud_registered',
-            'zed_node/left/color/rect/image',
-            'zed_node/right/color/rect/image',
-            'mavros/odometry/out',
-            'mavros/imu/data',
-            'mavros/hps167_pub',
-            'csi_cam/image_raw/compressed',
-            'scan',
-        ],
-        output='screen',
-    )
-
     return LaunchDescription([
+        # Use CycloneDDS with default network settings
+        set_rmw,
+
         # Launch arguments
-        use_mavros_arg,
         use_foxglove_arg,
-        use_rosbag_arg,
-        bag_output_path_arg,
-        
+
         # Nodes
         autonomy_stack_container,
         csi_camera_container,
         mavros_node,
         jsp_node,
-        jetson_stats_node,
         map_to_odom_tf,
-        rosbag_record,
-        # foxglove_bridge_node
+        foxglove_bridge_node,
     ])

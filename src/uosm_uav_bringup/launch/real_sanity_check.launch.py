@@ -11,32 +11,17 @@ from ament_index_python.packages import get_package_share_directory
 # Enable colored output
 os.environ["RCUTILS_COLORIZED_OUTPUT"] = "1"
 
-# DDS config path via ament package share directory
-_DDS_CONFIG_DIR = os.path.join(
-    get_package_share_directory('uosm_uav_bringup'), 'config', 'dds'
-)
-CYCLONEDDS_URI_PATH = os.path.join(_DDS_CONFIG_DIR, 'cyclonedds_device.xml')
-
 def generate_launch_description():
     # LaunchConfiguration
-    use_mavros = LaunchConfiguration('use_mavros')
     use_rosbag = LaunchConfiguration('use_rosbag')
     bag_output_path = LaunchConfiguration('bag_output_path')
     rosbag_delay = LaunchConfiguration('rosbag_delay')
     use_foxglove = LaunchConfiguration('use_foxglove')
 
-    # Declare launch argument to enable MAVROS
-    use_mavros_arg = DeclareLaunchArgument(
-        'use_mavros',
-        default_value='true',
-        description='Whether to launch MAVROS',
-        choices=['true', 'false']
-    )
-
     # Declare launch argument to enable ROS2 bag recording
     use_rosbag_arg = DeclareLaunchArgument(
         'use_rosbag',
-        default_value='false',
+        default_value='true',
         description='Whether to record ROS2 bag',
         choices=['true', 'false']
     )
@@ -63,11 +48,8 @@ def generate_launch_description():
         choices=['true', 'false']
     )
 
-    # DDS environment
+    # Use CycloneDDS with default network settings (allows Foxglove websocket to work)
     set_rmw = SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp')
-    set_cyclone_uri = SetEnvironmentVariable(
-        'CYCLONEDDS_URI', 'file://' + os.path.realpath(CYCLONEDDS_URI_PATH)
-    )
 
     # Configuration paths
     urdf_dir = get_package_share_directory('uosm_robot_viewer')
@@ -182,7 +164,6 @@ def generate_launch_description():
     mavros_node = Node(
         package='mavros',
         executable='mavros_node',
-        condition=IfCondition(use_mavros),
         parameters=[
             px4_pluginlists_path,
             px4_config_path,
@@ -283,12 +264,10 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        # Environment
+        # Use CycloneDDS with default network settings
         set_rmw,
-        set_cyclone_uri,
 
         # Launch arguments
-        use_mavros_arg,
         use_rosbag_arg,
         bag_output_path_arg,
         rosbag_delay_arg,
@@ -297,7 +276,6 @@ def generate_launch_description():
         # Nodes
         autonomy_stack_container,
         mavros_node,
-        # wifi_scan_node,
         jsp_node,
         map_to_odom_tf,
         jetson_stats_node,
