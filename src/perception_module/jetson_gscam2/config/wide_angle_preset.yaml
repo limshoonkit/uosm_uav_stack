@@ -1,0 +1,50 @@
+csi_camera_node:
+  ros__parameters:
+    # Basic camera parameters
+    sensor_id: 0
+    sensor_mode: -1  # Auto-select best mode, or set specific mode (0-255)
+    
+    # Resolution settings
+    input_width: 3280
+    input_height: 1848
+    output_width: 2560
+    output_height: 1440
+    
+    # Frame rate settings
+    framerate: 28         # Source framerate 
+    output_framerate: 24  # Output framerate
+
+    # Publishing options
+    publish_raw: false
+    publish_compressed: true
+    enable_encoding: true
+    encoding_format: "h264"  # or "h265" for better compression
+    encoding_bitrate: 6000000  # 6 Mbps for high quality
+    
+    # Camera Options (check with gst-inspect-1.0 nvarguscamerasrc)
+    # Temporal Noise Reduction (TNR)
+    tnr_mode: 0          # 0=off, 1=fast, 2=high_quality
+    tnr_strength: 0.5    # 0.3-0.7 range, higher for low light
+    
+    # Edge Enhancement (EE)
+    ee_mode: 0           # 0=off, 1=fast, 2=high_quality  
+    ee_strength: 0.4     # 0.1-0.5 range, avoid over-sharpening
+    
+    # White Balance
+    wbmode: 1            # 0=off, 1=auto, 2=incandescent, 3=fluorescent, 
+                         # 4=warm-fluorescent, 5=daylight, 6=cloudy-daylight,
+                         # 7=twilight, 8=shade, 9=manual
+    
+    # Auto Exposure Anti-banding
+    aeantibanding: 1     # 0=off, 1=auto, 2=50Hz, 3=60Hz
+    
+    # Image adjustments
+    saturation: 1.3      # 0.8-1.4 range, higher for more vivid colors
+    exposurecompensation: 0.0  # -2.0 to 2.0, adjust for lighting
+        
+    # Latency
+    max_buffers: 2       # Minimal buffering (1-3 range)
+    drop_frames: true    # Drop frames to prevent lag
+    leaky_queue: true    # Allow queue to drop old frames
+    sync_appsink: false  # Disable sync for lower latency
+    encoder_preset: 0    # 0=ultrafast, 1=fast, 2=medium, 3=slow

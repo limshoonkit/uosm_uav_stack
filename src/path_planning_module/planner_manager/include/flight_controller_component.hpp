@@ -14,6 +14,7 @@
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/set_mode.hpp>
 #include <mavros_msgs/srv/command_tol.hpp>
+#include <mavros_msgs/srv/command_home.hpp>
 #include <mavros_msgs/msg/position_target.hpp>
 
 #include <array>
@@ -97,6 +98,12 @@ namespace uosm
             int server_rejected_count_ = 0;
             int manual_target_count_ = 0;
 
+            // Home position
+            double home_lat_ = 0.0;
+            double home_lon_ = 0.0;
+            double home_alt_ = 0.0;
+            bool home_position_set_ = false;
+
             // Map alignment state
             std::atomic<bool> is_alignment_received_ = false;
             bool wait_for_alignment_ = true;
@@ -124,6 +131,7 @@ namespace uosm
             void requestArmingMavros();
             void requestLandingMavros();
             void requestEgoPlanner();
+            void requestSetHome();
 
             // Publishers
             rclcpp::Publisher<mavros_msgs::msg::PositionTarget>::SharedPtr raw_setpoint_pub_;
@@ -141,6 +149,7 @@ namespace uosm
             rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arming_client_;
             rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
             rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedPtr land_client_;
+            rclcpp::Client<mavros_msgs::srv::CommandHome>::SharedPtr set_home_client_;
 
             // Action
             rclcpp_action::Client<EgoPlannerAction>::SharedPtr ego_planner_client_;

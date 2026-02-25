@@ -1,0 +1,37 @@
+csi_camera_node:
+  ros__parameters:
+    sensor_id: 0
+    sensor_mode: -1
+
+    # Capture at full sensor resolution, let ISP do the heavy lifting
+    input_width: 1920
+    input_height: 1080
+    output_width: 1920
+    output_height: 1080
+
+    framerate: 30
+    output_framerate: 30
+
+    # Compressed-only — zero CPU copy, entire path stays in NVMM/NVENC
+    publish_raw: false
+    publish_compressed: true
+    enable_encoding: true
+    encoding_format: "h264"
+    encoding_bitrate: 4000000  # 4 Mbps — good 1080p quality, WiFi-friendly
+
+    # ISP: fast denoise + light sharpening for outdoor
+    tnr_mode: 1
+    tnr_strength: 0.4
+    ee_mode: 1
+    ee_strength: 0.2
+    wbmode: 1
+    aeantibanding: 1
+    saturation: 1.1
+    exposurecompensation: 0.0
+
+    # Minimal buffering — lowest latency, never block the pipeline
+    max_buffers: 2
+    drop_frames: true
+    leaky_queue: true
+    sync_appsink: false
+    encoder_preset: 0  # ultrafast — minimum NVENC latency

@@ -153,6 +153,11 @@ namespace uosm
             arming_client_ = create_client<mavros_msgs::srv::CommandBool>("/mavros/cmd/arming");
             set_mode_client_ = create_client<mavros_msgs::srv::SetMode>("/mavros/set_mode");
             land_client_ = create_client<mavros_msgs::srv::CommandTOL>("/mavros/cmd/land");
+            set_home_client_ = create_client<mavros_msgs::srv::CommandHome>("/mavros/cmd/set_home");
+
+            home_lat_ = getParam<double>(this, "fc.home.latitude",  0.0, " * Home latitude:  ");
+            home_lon_ = getParam<double>(this, "fc.home.longitude", 0.0, " * Home longitude: ");
+            home_alt_ = getParam<double>(this, "fc.home.altitude",  0.0, " * Home altitude:  ");
 
             // --- Polynomial trajectory subscription ---
             poly_traj_sub_ = create_subscription<uosm_uav_interface::msg::PolynomialTraj>(
@@ -262,6 +267,35 @@ namespace uosm
                     else
                     {
                         RCLCPP_ERROR(get_logger(), "Arming failed");
+                    }
+                });
+        }
+
+        void FlightController::requestSetHome()
+        {
+            if (!set_home_client_->wait_for_service(std::chrono::seconds(1)))
+            {
+                RCLCPP_WARN(get_logger(), "SetHome service not available");
+                return;
+            }
+            auto request = std::make_shared<mavros_msgs::srv::CommandHome::Request>();
+            request->current_gps = false;
+            request->latitude  = home_lat_;
+            request->longitude = home_lon_;
+            request->altitude  = home_alt_;
+            set_home_client_->async_send_request(
+                request,
+                [this](rclcpp::Client<mavros_msgs::srv::CommandHome>::SharedFuture future)
+                {
+                    if (future.get()->success)
+                    {
+                        RCLCPP_INFO(get_logger(), "Home position set (lat=%.7f, lon=%.7f, alt=%.1f)",
+                                    home_lat_, home_lon_, home_alt_);
+                        home_position_set_ = true;
+                    }
+                    else
+                    {
+                        RCLCPP_WARN(get_logger(), "Set home failed, will retry");
                     }
                 });
         }
@@ -390,6 +424,11 @@ namespace uosm
                     rclcpp::shutdown();
                     return;
                 }
+                if (current_mavros_state_.connected && !home_position_set_)
+                {
+                    requestSetHome();
+                }
+
                 if (current_mavros_state_.connected &&
                     !current_mavros_state_.armed &&
                     current_mavros_state_.mode != mavros_msgs::msg::State::MODE_PX4_OFFBOARD)

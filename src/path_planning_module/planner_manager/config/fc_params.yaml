@@ -15,6 +15,10 @@
       frame_id: "map"
       wait_for_alignment: false
       alignment_timeout: 15.0
+      home:
+        latitude: 3.272022    # deg
+        longitude: 101.454636 # deg
+        altitude: 22.0        # m (AMSL)
       # NMPC parameters (only used when controller_mode: "nmpc")
       # NOTE: NMPC is beta / experimental.
       nmpc:

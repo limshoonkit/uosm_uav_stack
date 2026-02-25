@@ -6,6 +6,7 @@
 - **ROS 2 Humble** 
 - **PX4-Autopilot**
 - **MAVROS** (`sudo apt install ros-humble-mavros ros-humble-mavros-extras`)
+- **Foxglove Bridge** (`sudo apt install ros-humble-foxglove-bridge ros-humble-foxglove-msgs`)
 - **System dependencies**: Eigen3, PCL, OpenCV, Armadillo, pkg-config
 
 ## A. Build
@@ -27,7 +28,7 @@ For preset waypoint mode, the planner will begin executing the loaded waypoints 
 cd ~/PX4-Autopilot && HEADLESS=1 make px4_sitl gz_x500
 ```
 
-Wait until PX4 finishes initialization and launch QGC.
+Wait until PX4 finishes initialization and launch [QGC](https://github.com/mavlink/qgroundcontrol).
 
 ### Terminal 2 — Launch the simulation
 
