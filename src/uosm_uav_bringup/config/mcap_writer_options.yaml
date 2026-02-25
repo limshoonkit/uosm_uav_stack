@@ -1,0 +1,19 @@
+# mcap_writer_options.yml
+# noChunkCRC: false
+# noChunking: false
+# noMessageIndex: false
+# noSummary: false
+# chunkSize: 786432
+# compression: "Lz4"  # Lz4, Zstd
+# compressionLevel: "Fastest" # "Fastest", "Fast", "Default", "Slow", "Slowest"
+# forceCompression: false
+
+# mcap_writer_options.yml
+noChunkCRC: false
+noChunking: false
+noMessageIndex: false
+noSummary: false
+chunkSize: 786432
+compression: "Zstd"  # Lz4, Zstd
+compressionLevel: "Default" # "Fastest", "Fast", "Default", "Slow", "Slowest"
+forceCompression: false

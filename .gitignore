@@ -1,0 +1,8 @@
+build/
+install/
+log/
+bags/
+__pycache__/
+*.pyc
+
+acados_generated/

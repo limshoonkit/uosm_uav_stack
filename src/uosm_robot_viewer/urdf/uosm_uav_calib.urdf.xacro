@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="uosm_uav_platform">
+  <!-- Package path -->
+  <xacro:property name="package_path" value="$(find uosm_robot_viewer)"/>
+  <xacro:arg name="camera_name"   default="zedm" />
+  <xacro:property name="camera_baseline" value="0.00000" />
+  <xacro:property name="camera_height"   value="0.00000" />
+  <xacro:property name="optical_offset_x" value="0.00000" />
+  <xacro:property name="M_PI"     value="3.1415926535897931" />
+
+  <!-- T_rplidar_imu -->
+  <xacro:arg name="rplidar_x" default="0.00000" />
+  <xacro:arg name="rplidar_y" default="0.00000" />
+  <xacro:arg name="rplidar_z" default="0.00000" />
+  <xacro:arg name="rplidar_roll" default="0.00000" />
+  <xacro:arg name="rplidar_pitch" default="0.00000" />
+  <xacro:arg name="rplidar_yaw" default="0.00000" /> 
+
+  <!-- T_csi_cam_imu -->
+  <xacro:arg name="csi_cam_x" default="0.00000" />
+  <xacro:arg name="csi_cam_y" default="0.00000" />
+  <xacro:arg name="csi_cam_z" default="0.00000" />
+  <xacro:arg name="csi_cam_roll" default="0.00000" />
+  <xacro:arg name="csi_cam_pitch" default="0.00000" />
+  <xacro:arg name="csi_cam_yaw" default="0.00000" /> 
+
+  <!-- T_hps167_imu -->
+  <xacro:arg name="hps167_x" default="0.00000" />
+  <xacro:arg name="hps167_y" default="0.00000" />
+  <xacro:arg name="hps167_z" default="0.00000" />
+  <xacro:arg name="hps167_roll" default="0.00000" />
+  <xacro:arg name="hps167_pitch" default="0.00000" />
+  <xacro:arg name="hps167_yaw" default="0.00000" />
+
+  <!-- T_cam_l_imu -->
+  <xacro:arg name="cam_left_x" default="0.00000" />
+  <xacro:arg name="cam_left_y" default="0.00000" />
+  <xacro:arg name="cam_left_z" default="0.00000" />
+  <xacro:arg name="cam_left_roll" default="0.00000" />
+  <xacro:arg name="cam_left_pitch" default="0.00000" />
+  <xacro:arg name="cam_left_yaw" default="0.00000" />
+  
+  <!-- T_cam_r_imu -->
+  <xacro:arg name="cam_right_x" default="0.00000" />
+  <xacro:arg name="cam_right_y" default="0.00000" />
+  <xacro:arg name="cam_right_z" default="0.00000" />
+  <xacro:arg name="cam_right_roll" default="0.00000" />
+  <xacro:arg name="cam_right_pitch" default="0.00000" />
+  <xacro:arg name="cam_right_yaw" default="0.00000" /> 
+
+  <!-- Joints -->
+  <joint name="rotor_1_joint" type="revolute">
+    <limit lower="-3.14000" upper="3.14000" effort="0.00000" velocity="0.00000"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.17000 -0.17000 0.03950"/>
+    <parent link="base_link"/>
+    <child link="rotor_1_link"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+  </joint>
+  
+  <joint name="rotor_2_joint" type="revolute">
+    <limit lower="-3.14000" upper="3.14000" effort="0.00000" velocity="0.00000"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="-0.16750 0.16950 0.03950"/>
+    <parent link="base_link"/>
+    <child link="rotor_2_link"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+  </joint>
+  
+  <joint name="rotor_3_joint" type="revolute">
+    <limit lower="-3.14000" upper="3.14000" effort="0.00000" velocity="0.00000"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.17200 0.16750 0.03950"/>
+    <parent link="base_link"/>
+    <child link="rotor_3_link"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+  </joint>
+  
+  <joint name="rotor_4_joint" type="revolute">
+    <limit lower="-3.14000" upper="3.14000" effort="0.00000" velocity="0.00000"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="-0.16800 -0.16800 0.03950"/>
+    <parent link="base_link"/>
+    <child link="rotor_4_link"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+  </joint>
+
+  <joint name="rplidar_joint" type="fixed">
+        <origin rpy="$(arg rplidar_roll) $(arg rplidar_pitch) $(arg rplidar_yaw)" 
+            xyz="$(arg rplidar_x) $(arg rplidar_y) $(arg rplidar_z)"/>
+    <parent link="base_link"/>
+    <child link="laser"/>
+  </joint>
+
+  <joint name="csi_cam_joint" type="fixed">
+        <origin rpy="$(arg csi_cam_roll) $(arg csi_cam_pitch) $(arg csi_cam_yaw)" 
+            xyz="$(arg csi_cam_x) $(arg csi_cam_y) $(arg csi_cam_z)"/>
+    <parent link="base_link"/>
+    <child link="csi_cam_frame"/>
+  </joint>
+
+  <joint name="hps167_joint" type="fixed">
+    <origin rpy="$(arg hps167_roll) $(arg hps167_pitch) $(arg hps167_yaw)" 
+            xyz="$(arg hps167_x) $(arg hps167_y) $(arg hps167_z)"/>
+    <parent link="base_link"/>
+    <child link="hps167_frame"/>
+  </joint>
+
+  <joint name="$(arg camera_name)_joint" type="fixed">
+    <origin xyz="0.00000 0.00000 0.00000" rpy="0.00000 0.00000 0.00000"/>
+    <parent link="base_link"/>
+    <child link="$(arg camera_name)_camera_link"/>
+  </joint>
+  <joint name="$(arg camera_name)_camera_center_joint" type="fixed">
+      <parent link="$(arg camera_name)_camera_link"/>
+      <child link="$(arg camera_name)_camera_center"/>
+      <origin xyz="0 0 ${camera_height/2}" rpy="0 0 0" />
+  </joint>
+  <joint name="$(arg camera_name)_left_camera_joint" type="fixed">
+      <parent link="$(arg camera_name)_camera_center"/>
+      <child link="$(arg camera_name)_left_camera_frame"/>
+      <origin xyz="${optical_offset_x} ${camera_baseline/2} 0" rpy="0 0 0" />
+  </joint>
+  <joint name="$(arg camera_name)_left_camera_optical_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="-${M_PI/2} 0.0 -${M_PI/2}"/>
+      <parent link="$(arg camera_name)_left_camera_frame"/>
+      <child link="$(arg camera_name)_left_camera_optical_frame"/>
+  </joint>
+  <joint name="$(arg camera_name)_right_camera_joint" type="fixed">
+        <parent link="$(arg camera_name)_camera_center"/>
+        <child link="$(arg camera_name)_right_camera_frame"/>
+        <origin xyz="${optical_offset_x} -${camera_baseline/2} 0" rpy="0 0 0" />
+  </joint>
+  <joint name="$(arg camera_name)_right_camera_optical_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="-${M_PI/2} 0.0 -${M_PI/2}"/>
+    <parent link="$(arg camera_name)_right_camera_frame"/>
+    <child link="$(arg camera_name)_right_camera_optical_frame"/>
+  </joint>
+
+  <!-- Fixed Links -->
+  <link name="base_link"/>
+
+  <!-- Rotor Links -->
+  <link name="rotor_1_link"/>
+  <link name="rotor_2_link"/>
+  <link name="rotor_3_link"/>
+  <link name="rotor_4_link"/>
+
+  <!-- Sensor Links -->
+  <link name="laser"/>
+  <link name="csi_cam_frame"/>
+  <link name="hps167_frame"/>
+  <link name="$(arg camera_name)_camera_link"/>
+  <link name="$(arg camera_name)_camera_center"/>
+  <link name="$(arg camera_name)_left_camera_frame"/>
+  <link name="$(arg camera_name)_left_camera_optical_frame"/>
+  <link name="$(arg camera_name)_right_camera_frame"/>
+  <link name="$(arg camera_name)_right_camera_optical_frame"/>
+
+</robot>

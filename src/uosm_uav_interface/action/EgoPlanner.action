@@ -1,0 +1,14 @@
+# EgoPlanner.action
+
+# Request
+bool trigger
+float32 timeout_seconds
+---
+# Result
+bool success
+---
+# Feedback
+uint32 current_waypoint_index
+uint8 progress
+bool is_manual_target
+float64 goal_yaw

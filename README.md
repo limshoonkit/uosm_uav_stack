@@ -1,1 +1,65 @@
-# uosm_uav_stack
+# UoSM UAV Stack
+
+
+## Prerequisites
+
+- **ROS 2 Humble** 
+- **PX4-Autopilot**
+- **MAVROS** (`sudo apt install ros-humble-mavros ros-humble-mavros-extras`)
+- **System dependencies**: Eigen3, PCL, OpenCV, Armadillo, pkg-config
+
+## A. Build
+
+TBD
+```bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)
+```
+
+## B. Run the Simulation
+
+For interactive mode, once RViz opens use the **2D Nav Goal** tool to click waypoints. The ego planner will generate a collision-free trajectory and the controller will track it.
+
+For preset waypoint mode, the planner will begin executing the loaded waypoints automatically after takeoff, waypoints and map currently in [maps](./src/virtual_module/map_processor/maps).
+
+### Terminal 1 — Start PX4 SITL
+
+```bash
+cd ~/PX4-Autopilot && HEADLESS=1 make px4_sitl gz_x500
+```
+
+Wait until PX4 finishes initialization and launch QGC.
+
+### Terminal 2 — Launch the simulation
+
+Two launch files are available depending on how you want to supply waypoints:
+
+**Interactive mode** — click waypoints in RViz using the 2D Nav Goal tool:
+
+```bash
+source install/setup.bash
+ros2 launch uosm_uav_bringup sim_interactive_single.launch.py
+```
+
+**Preset waypoint mode** — follows a pre-defined waypoint CSV file:
+
+```bash
+source install/setup.bash
+ros2 launch uosm_uav_bringup sim_preset_wp_single.launch.py
+```
+
+## Package Overview
+
+| Package | Description |
+|---|---|
+| `nmpc_controller` | Acados-based NMPC solver (C++ library) |
+| `acados_vendor_ros2` | ROS 2 vendor package for acados |
+| `planner_manager` | Ego planner + flight controller components |
+| `uosm_uav_bringup` | Launch files and configs |
+| `uosm_uav_interface` | Custom ROS 2 message definitions |
+| `grid_map` | Occupancy grid for planning |
+| `planner_utils` | Polynomial trajectory utilities |
+| `local_sensing` | Simulated depth camera |
+| `map_processor` | Point cloud map loading |
+| `odom_visualization` | Odometry visualization in RViz |
+| `pose_utils` | Pose/transform utilities |
+| `uosm_robot_viewer` | URDF model and robot state publisher |

@@ -1,0 +1,14 @@
+<CycloneDDS>
+  <Domain>
+    <General>
+      <Interfaces>
+        <!-- Bind to localhost only - Zenoh bridge handles cross-network -->
+        <NetworkInterface address="127.0.0.1" />
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

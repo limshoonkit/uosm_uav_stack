@@ -1,0 +1,5 @@
+/csi_cam/image_raw/compressed:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 5

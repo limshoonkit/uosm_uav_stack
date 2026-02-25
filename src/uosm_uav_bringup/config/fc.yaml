@@ -1,0 +1,30 @@
+/**:
+  ros__parameters:
+    # src/uosm_uav_bringup/config/fc.yaml
+    fc:
+      controller_mode: "feedforward"  # "feedforward" or "nmpc"
+      starting_yaw_deg: 0.0
+      time_forward: 1.0
+      takeoff_height: 1.0
+      state_machine_rate: 5.0
+      setpoint_publish_rate: 100.0
+      request_timeout: 2.0
+      hover_period: 15.0
+      preflight_check_timeout: 3.0
+      max_manual_target_allowed: 3
+      frame_id: "map"
+      wait_for_alignment: false
+      alignment_timeout: 15.0
+      # NMPC parameters (only used when controller_mode: "nmpc")
+      # NOTE: NMPC is beta / experimental.
+      nmpc:
+        horizon_steps: 20
+        dt: 0.05
+        w_pos: [80.0, 80.0, 120.0]
+        w_vel: [10.0, 10.0, 15.0]
+        w_acc: [5.0, 5.0, 8.0]
+        w_jerk: [1.0, 1.0, 1.0]
+        v_max: [1.5, 1.5, 1.0]
+        a_max: [3.0, 3.0, 2.0]
+        j_max: [10.0, 10.0, 8.0]
+        use_state_prediction: true

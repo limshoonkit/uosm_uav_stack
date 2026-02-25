@@ -1,0 +1,72 @@
+/**:
+  ros__parameters:
+    plugin_denylist:
+      - '*'
+
+    plugin_allowlist:
+      - actuator_control
+      # adsb
+      - altitude
+      # cam_imu_sync
+      # camera
+      # cellular_status
+      - command
+      - companion_process_status
+      # common #
+      # debug_value
+      - distance_sensor
+      - esc_status
+      - esc_telemetry
+      # extras #
+      # fake_gps
+      - ftp
+      # geofence
+      - global_position
+      # gps_input
+      # gps_rtk
+      - gps_status
+      # guided_target
+      # hil
+      - home_position
+      # image_pub
+      - imu
+      # landing_target
+      - local_position
+      - log_transfer
+      - mag_calibration_status
+      - manual_control
+      # mocap_pose_estimate
+      # mount_control
+      # nav_controller_output
+      # obstacle
+      # obstacle_distance
+      # optical_flow
+      - odometry
+      - onboard_computer_status
+      - param
+      - play_tune
+      # px4flow
+      # rallypoint
+      - rangefinder
+      - rc_io
+      # setpoint_accel
+      # setpoint_attitude
+      - setpoint_position
+      - setpoint_raw
+      # setpoint_trajectory
+      - setpoint_velocity
+      - sys_status
+      - sys_time
+      # tdr_radio
+      # terrain
+      # trajectory
+      # tunnel
+      # vfr_hud
+      - vibration
+      # vision_pose
+      # vision_speed
+      # vision_speed_estimate
+      # waypoint
+      # wheel_odometry
+      # wind
+      # wind_estimation

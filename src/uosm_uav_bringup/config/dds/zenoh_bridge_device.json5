@@ -1,0 +1,29 @@
+{
+  // Zenoh bridge config for DRONE (Jetson Orin)
+  // The drone connects to the host's Zenoh router via TCP
+
+  mode: "client",
+
+  connect: {
+    endpoints: [
+      // Host desktop IP via router
+      "tcp/192.168.0.2:7447"
+    ]
+  },
+
+  // Scouting disabled - use explicit endpoints
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  },
+
+  // Bridge all ROS 2 topics/services by default
+  // Uncomment allowance below to whitelist specific topics
+  // ros2dds: {
+  //   allow: {
+  //     publishers: ["mavros/**", "zed_node/**", "ego_planner/**", "scan", "diagnostics", "tf", "tf_static"],
+  //     subscribers: ["mavros/**", "ego_planner/**"],
+  //   }
+  // }
+}

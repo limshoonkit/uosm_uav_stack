@@ -1,0 +1,29 @@
+{
+  // Zenoh bridge config for HOST DESKTOP
+  // The host listens for incoming connections from the drone
+
+  mode: "router",
+
+  listen: {
+    endpoints: [
+      // Listen on all interfaces so drone can reach us
+      "tcp/0.0.0.0:7447"
+    ]
+  },
+
+  // Scouting disabled - drone connects explicitly
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  },
+
+  // Bridge all ROS 2 topics/services by default
+  // Uncomment allowance below to whitelist specific topics
+  // ros2dds: {
+  //   allow: {
+  //     publishers: ["mavros/**", "zed_node/**", "ego_planner/**", "scan", "diagnostics", "tf", "tf_static"],
+  //     subscribers: ["mavros/**", "ego_planner/**"],
+  //   }
+  // }
+}

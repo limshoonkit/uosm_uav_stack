@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>nmpc_controller</name>
+  <version>0.1.0</version>
+  <description>NMPC solver library for quadrotor trajectory tracking using acados</description>
+  <maintainer email="skl1g14@soton.ac.uk">Janitor</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>acados_vendor_ros2</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
