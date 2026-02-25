@@ -49,7 +49,7 @@ def generate_launch_description():
     # Get package paths
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(map_align_dir, 'config', 'map_alignment_params.yaml')
-    map_pcd_path = os.path.join(map_align_dir, 'maps', 'tuanmee_site.pcd')
+    map_pcd_path = os.path.join(map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
     
     # Mock trunk observation publisher
     mock_trunk_node = Node(

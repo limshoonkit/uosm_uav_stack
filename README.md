@@ -9,10 +9,30 @@
 ## A. Build
 
 TBD
-
 ```bash
 chmod +x ./scripts/setup.sh
 ./scripts/setup.sh
+```
+
+Experimental nmpc
+```bash
+# 1. Build acados vendor package
+colcon build --packages-select acados_vendor_ros2
+source install/setup.bash
+
+# 2. Patch acados_vendor for Jetson (aarch64 t_renderer + Python 3.10 fix)
+./src/nmpc_controller/scripts/patch_acados_vendor.sh
+
+# 3. Ensure compatible numpy and scipy
+pip3 install numpy==1.26.4 scipy==1.15.3
+
+# 4. Generate the acados solver C code
+cd src/nmpc_controller/acados_model
+python3 generate_solver.py
+cd ../../../
+
+# 5. Build the NMPC controller
+colcon build --packages-select nmpc_controller
 ```
 
 ```bash

@@ -40,8 +40,8 @@ def generate_launch_description():
             planner_config
         ],
         remappings=[
-            ('odometry', "mavros/odometry/out"), # combined odom from sensors
-            ('grid_map/cloud', 'zed_node/point_cloud/cloud_registered'), # combined cloud, make sure calibrated
+            ('odometry', "mavros/odometry/out"), # odometry
+            ('grid_map/cloud', 'zed_node/point_cloud/cloud_registered'),
             ('alignment_done', '/map_alignment/alignment_done'),
             ('alignment_transform', '/map_alignment/alignment_transform'),
         ],
@@ -93,7 +93,7 @@ def generate_launch_description():
 
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(map_align_dir, 'config', 'map_alignment_params.yaml')
-    map_pcd_path = os.path.join(map_align_dir, 'maps', 'tuanmee_site.pcd')
+    map_pcd_path = os.path.join(map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
     map_align_component = ComposableNode(
         package='map_alignment',
         namespace='',
@@ -139,18 +139,6 @@ def generate_launch_description():
         output='screen',
     )
 
-    # Foxglove bridge
-    foxglove_bridge_node = Node(
-        package='foxglove_bridge',
-        executable='foxglove_bridge',
-        name='foxglove_bridge',
-        output='screen',
-        parameters=[{
-            "port": 8765,
-            # Optional: "allowed_origins": ["*"] or specific domains
-        }]
-    ) 
-
     return LaunchDescription([
         # Launch arguments
         use_rosbag_arg,
@@ -163,5 +151,4 @@ def generate_launch_description():
         robot_viewer_node,
         rosbag_playback,
         rviz_node
-        # foxglove_bridge_node
     ])
