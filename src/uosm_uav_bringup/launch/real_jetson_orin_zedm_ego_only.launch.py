@@ -38,7 +38,7 @@ def generate_launch_description():
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
 
     waypoint_dir = get_package_share_directory('map_processor')
-    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm_indoor.csv')
+    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm', 'uosm_indoor.csv')
 
     # Flight controller (no alignment wait)
     fc_component = ComposableNode(
