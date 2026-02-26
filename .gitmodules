@@ -10,6 +10,7 @@
 [submodule "src/perception_module/zed-ros2-wrapper"]
 	path = src/perception_module/zed-ros2-wrapper
 	url = https://github.com/stereolabs/zed-ros2-wrapper
+	branch = humble-v5.1.0
 
 [submodule "src/third_party/ros2_jetson_stats"]
 	path = src/third_party/ros2_jetson_stats

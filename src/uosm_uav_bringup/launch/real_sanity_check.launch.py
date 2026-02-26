@@ -122,7 +122,7 @@ def generate_launch_description():
     )
 
     jetson_gscam2_dir = get_package_share_directory('jetson_gscam2')
-    csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'wide_angle_preset.yaml')
+    csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'streaming_1080p_preset.yaml')
     csi_cam_info_url = 'package://jetson_gscam2/config/camera_calibration.yaml'
 
     # CSI camera component
@@ -156,6 +156,18 @@ def generate_launch_description():
             rplidar_component,
             odom_republisher_component,
             rsp_component,
+        ]
+    )
+
+    # CSI camera in separate container to isolate from ZED/autonomy stack
+    csi_camera_container = ComposableNodeContainer(
+        name='csi_camera_container',
+        namespace='',
+        package='rclcpp_components',
+        executable='component_container',
+        arguments=['--ros-args', '--log-level', 'info'],
+        output='screen',
+        composable_node_descriptions=[
             csi_camera_component,
         ]
     )
@@ -275,6 +287,7 @@ def generate_launch_description():
 
         # Nodes
         autonomy_stack_container,
+        csi_camera_container,
         mavros_node,
         jsp_node,
         map_to_odom_tf,

@@ -19,6 +19,7 @@ find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(camera_info_manager REQUIRED)
+find_package(foxglove_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # Find GStreamer
@@ -47,6 +48,7 @@ ament_target_dependencies(csi_camera_component
   rclcpp
   rclcpp_components
   sensor_msgs
+  foxglove_msgs
   image_transport
   cv_bridge
   std_msgs

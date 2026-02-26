@@ -71,6 +71,27 @@ source install/setup.bash
 ros2 launch uosm_uav_bringup sim_preset_wp_single.launch.py
 ```
 
+## C. Deployment
+
+Reboot PX4 Autopilot to reset internal state
+```bash
+source install/setup.bash
+ros2 launch uosm_uav_bringup reboot_px4.launch.py
+```
+
+Sanity check to make sure hardware working as expected, also to test PX4 params tuning whether vehicle can hover stabily and other analysis (vibration metric, ekf2, pid control, battery), this enable vehicle to fly in position mode without GNSS
+```bash
+source install/setup.bash
+ros2 launch uosm_uav_bringup real_sanity_check.launch.py use_rosbag:=false
+```
+
+**IMPORTANT**: Real flight, make sure to fly in safe area
+```bash
+source install/setup.bash
+# ros2 launch uosm_uav_bringup real_jetson_orin_interactive.launch.py use_foxglove:=true
+ros2 launch uosm_uav_bringup real_jetson_orin_preset_wp.launch.py use_foxglove:=true wait_for_alignment:=true
+```
+
 ## Package Overview
 
 | Package | Description |
