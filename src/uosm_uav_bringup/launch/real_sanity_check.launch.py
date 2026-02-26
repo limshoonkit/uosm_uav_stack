@@ -62,6 +62,8 @@ def generate_launch_description():
     bringup_package = get_package_share_directory('uosm_uav_bringup')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
+    zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
+
     mcap_options = os.path.join(bringup_package, 'config', 'mcap_writer_options.yaml')
     qos_overrides = os.path.join(bringup_package, 'config', 'qos_overrides.yaml')
 
@@ -254,17 +256,25 @@ def generate_launch_description():
             '--qos-profile-overrides-path', qos_overrides,
             # add topics
             'diagnostics',
+            # ZED
+            'zed_node/odom',
             'zed_node/point_cloud/cloud_registered',
             'zed_node/left/color/rect/image',
             'zed_node/right/color/rect/image',
             'zed_node/left/color/rect/image/camera_info',
             'zed_node/right/color/rect/image/camera_info',
+            # Mavros
             'mavros/odometry/out',
             'mavros/imu/data',
             'mavros/hps167_pub',
+            # CSI camera
             'csi_cam/image_raw/compressed',
             'csi_cam/camera_info',
+            # 2D lidar raw scan
             'scan',
+            # TF
+            '/tf',
+            '/tf_static',
         ],
         output='screen',
     )
