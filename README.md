@@ -90,6 +90,8 @@ ros2 launch uosm_uav_bringup real_sanity_check.launch.py use_rosbag:=false
 source install/setup.bash
 # ros2 launch uosm_uav_bringup real_jetson_orin_interactive.launch.py use_foxglove:=true
 ros2 launch uosm_uav_bringup real_jetson_orin_preset_wp.launch.py use_foxglove:=true wait_for_alignment:=true
+
+ros2 launch uosm_uav_bringup real_jetson_orin_zedm_ego_only.launch.py use_foxglove:=true
 ```
 
 ## Package Overview
