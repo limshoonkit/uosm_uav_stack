@@ -40,6 +40,7 @@ def generate_launch_description():
     planner_config = os.path.join(bringup_package, 'config', 'planner.yaml')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
+    # zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
 
     # Flight controller component
     fc_component = ComposableNode(

@@ -35,8 +35,8 @@ def generate_launch_description():
     fc_config = os.path.join(bringup_package, 'config', 'fc.yaml')
     planner_config = os.path.join(bringup_package, 'config', 'planner.yaml')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
-    # zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
-    zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
+    zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
+    # zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
 
     waypoint_dir = get_package_share_directory('map_processor')
     waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm', 'uosm_indoor.csv')
