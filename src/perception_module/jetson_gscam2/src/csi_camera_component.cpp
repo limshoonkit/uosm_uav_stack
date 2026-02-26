@@ -3,6 +3,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
+#include <foxglove_msgs/msg/compressed_video.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
@@ -135,6 +136,8 @@ namespace uosm
                 if (publish_compressed_)
                 {
                     compressed_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>("image_raw/compressed", qos);
+                    foxglove_video_pub_ = create_publisher<foxglove_msgs::msg::CompressedVideo>(
+                        "image_raw/" + encoding_format_, qos);
                 }
                 camera_info_pub_ = create_publisher<sensor_msgs::msg::CameraInfo>("camera_info", qos);
 
@@ -203,9 +206,9 @@ namespace uosm
                 {
                     // both raw and compressed
                     std::string encoder = (encoding_format_ == "h265") ? "nvv4l2h265enc" : "nvv4l2h264enc";
-                    std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) + 
-                                                 " preset-level=" + std::to_string(encoder_preset_) + 
-                                                 " profile=0";
+                    std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) +
+                                                 " preset-level=" + std::to_string(encoder_preset_) +
+                                                 " profile=0 insert-sps-pps=true";
                     
                     pipeline_str = processing_pipeline + " ! tee name=t " +
                                    "t. ! " + queue_settings + " ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! appsink name=raw_sink" + appsink_settings + " " +
@@ -222,9 +225,9 @@ namespace uosm
                 {
                     // compressed
                     std::string encoder = (encoding_format_ == "h265") ? "nvv4l2h265enc" : "nvv4l2h264enc";
-                    std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) + 
-                                                 " preset-level=" + std::to_string(encoder_preset_) + 
-                                                 " profile=0";
+                    std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) +
+                                                 " preset-level=" + std::to_string(encoder_preset_) +
+                                                 " profile=0 insert-sps-pps=true";
                     
                     pipeline_str = processing_pipeline + " ! " + encoder_settings + " ! " +
                                    ((encoding_format_ == "h265") ? "video/x-h265" : "video/x-h264") + ",stream-format=byte-stream ! appsink name=encoded_sink" + appsink_settings;
@@ -290,7 +293,8 @@ namespace uosm
             static GstFlowReturn onNewEncodedSample(GstElement *sink, gpointer user_data)
             {
                 auto *node = static_cast<CSICameraComponent *>(user_data);
-                if (node->compressed_pub_->get_subscription_count() > 0)
+                if (node->compressed_pub_->get_subscription_count() > 0 ||
+                    node->foxglove_video_pub_->get_subscription_count() > 0)
                 {
                     return node->handleEncodedSample(sink);
                 }
@@ -321,13 +325,29 @@ namespace uosm
                     return GST_FLOW_ERROR;
                 }
 
-                // Create compressed message
                 auto stamp = now();
-                auto compressed_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
-                compressed_msg->header.stamp = stamp;
-                compressed_msg->header.frame_id = frame_id_;
-                compressed_msg->format = encoding_format_;
-                compressed_msg->data.assign(map_info.data, map_info.data + map_info.size);
+
+                // sensor_msgs/CompressedImage (format field is informational only; not decoded by Foxglove)
+                if (compressed_pub_->get_subscription_count() > 0)
+                {
+                    auto compressed_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+                    compressed_msg->header.stamp = stamp;
+                    compressed_msg->header.frame_id = frame_id_;
+                    compressed_msg->format = encoding_format_;
+                    compressed_msg->data.assign(map_info.data, map_info.data + map_info.size);
+                    compressed_pub_->publish(std::move(compressed_msg));
+                }
+
+                // foxglove_msgs/CompressedVideo — decoded natively by Foxglove
+                if (foxglove_video_pub_->get_subscription_count() > 0)
+                {
+                    auto foxglove_msg = std::make_unique<foxglove_msgs::msg::CompressedVideo>();
+                    foxglove_msg->timestamp = stamp;
+                    foxglove_msg->frame_id = frame_id_;
+                    foxglove_msg->format = encoding_format_;
+                    foxglove_msg->data.assign(map_info.data, map_info.data + map_info.size);
+                    foxglove_video_pub_->publish(std::move(foxglove_msg));
+                }
 
                 // Get camera info from the manager and publish
                 auto camera_info_msg = std::make_unique<sensor_msgs::msg::CameraInfo>(cinfo_manager_->getCameraInfo());
@@ -335,9 +355,6 @@ namespace uosm
                 camera_info_msg->header.frame_id = frame_id_;
                 camera_info_msg->width = output_width_;
                 camera_info_msg->height = output_height_;
-
-                // Publish
-                compressed_pub_->publish(std::move(compressed_msg));
                 camera_info_pub_->publish(std::move(camera_info_msg));
 
                 // Cleanup
@@ -475,6 +492,7 @@ namespace uosm
             // publishers
             image_transport::Publisher image_pub_;
             rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr compressed_pub_;
+            rclcpp::Publisher<foxglove_msgs::msg::CompressedVideo>::SharedPtr foxglove_video_pub_;
             rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
             std::shared_ptr<camera_info_manager::CameraInfoManager> cinfo_manager_;
 

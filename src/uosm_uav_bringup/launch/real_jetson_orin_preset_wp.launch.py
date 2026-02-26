@@ -50,14 +50,14 @@ def generate_launch_description():
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
 
     waypoint_dir = get_package_share_directory('map_processor')
-    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm_indoor.csv') # NOTE: Change preset wp here!
+    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm', 'uosm_indoor.csv') # NOTE: Change preset wp here!
 
     trunk_seg_dir = get_package_share_directory('trunk_segmentation')
     trunk_seg_config = os.path.join(trunk_seg_dir, 'config', 'trunk_segmentation_params.yaml')
 
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(map_align_dir, 'config', 'map_alignment_params.yaml')
-    map_pcd_path = os.path.join(map_align_dir, 'maps', 'tuanmee_site.pcd')
+    map_pcd_path = os.path.join(map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
 
     # Trunk segmentation component
     trunk_seg_component = ComposableNode(
@@ -105,7 +105,7 @@ def generate_launch_description():
             {'fc.wait_for_alignment': wait_for_alignment}
         ],
         remappings=[
-            ('odometry', "mavros/odometry/out"), # fused odom from sensors
+            ('odometry', "mavros/odometry/out"), # odometry
             ('alignment_done', '/map_alignment/alignment_done'),
         ],
         extra_arguments=[{'use_intra_process_comms': True}]
@@ -217,7 +217,7 @@ def generate_launch_description():
     )
 
     jetson_gscam2_dir = get_package_share_directory('jetson_gscam2')
-    csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'wide_angle_preset.yaml')
+    csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'streaming_1080p_preset.yaml')
     csi_cam_info_url = 'package://jetson_gscam2/config/camera_calibration.yaml'
 
     # CSI camera component
@@ -262,7 +262,7 @@ def generate_launch_description():
                 'fcu_url': '/dev/ttyACM0:2000000',
                 #'fcu_url': '/dev/ttyTHS1:1152000',
                 #'gcs_url': 'udp://@127.0.0.1:14550',
-                'gcs_url': 'udp://@192.168.0.2:14550',
+                #'gcs_url': 'udp://@192.168.0.2:14550',
                 'tgt_system': 1,
                 'tgt_component': 1,
                 'fcu_protocol': "v2.0",
