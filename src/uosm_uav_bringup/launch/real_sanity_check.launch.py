@@ -17,6 +17,7 @@ def generate_launch_description():
     bag_output_path = LaunchConfiguration('bag_output_path')
     rosbag_delay = LaunchConfiguration('rosbag_delay')
     use_foxglove = LaunchConfiguration('use_foxglove')
+    use_gridmap = LaunchConfiguration('use_gridmap')
 
     # Declare launch argument to enable ROS2 bag recording
     use_rosbag_arg = DeclareLaunchArgument(
@@ -48,6 +49,13 @@ def generate_launch_description():
         choices=['true', 'false']
     )
 
+    use_gridmap_arg = DeclareLaunchArgument(
+        'use_gridmap',
+        default_value='true',
+        description='Whether to run grid map only (EgoPlanner with empty waypoints, no path planning)',
+        choices=['true', 'false']
+    )
+
     # Use CycloneDDS with default network settings (allows Foxglove websocket to work)
     set_rmw = SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp')
 
@@ -60,6 +68,7 @@ def generate_launch_description():
     px4_config_path = os.path.join(planner_dir, 'config', 'mavros_config.yaml')
 
     bringup_package = get_package_share_directory('uosm_uav_bringup')
+    planner_config = os.path.join(bringup_package, 'config', 'planner.yaml')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
@@ -123,6 +132,24 @@ def generate_launch_description():
         }]
     )
 
+    # Grid map only: EgoPlanner with empty waypoints (same as test_gridmap, no path planning)
+    gridmap_planner_component = ComposableNode(
+        package='planner_manager',
+        namespace='',
+        plugin='uosm::path_planning::EgoPlanner',
+        name='ego_planner_node',
+        parameters=[
+            {'planner.waypoint_csv_file_path': ''},
+            planner_config,
+        ],
+        remappings=[
+            ('odometry', '/mavros/odometry/out'),
+            ('grid_map/cloud', '/zed_node/point_cloud/cloud_registered'),
+            ('grid_map/scan', '/scan'),
+        ],
+        extra_arguments=[{'use_intra_process_comms': True}],
+    )
+
     jetson_gscam2_dir = get_package_share_directory('jetson_gscam2')
     csi_cam_config = os.path.join(jetson_gscam2_dir, 'config', 'streaming_1080p_preset.yaml')
     csi_cam_info_url = 'package://jetson_gscam2/config/camera_calibration.yaml'
@@ -172,6 +199,20 @@ def generate_launch_description():
         composable_node_descriptions=[
             csi_camera_component,
         ]
+    )
+
+    # Grid map only container (EgoPlanner with empty waypoints; subscribes to odom, point cloud, scan)
+    gridmap_container = ComposableNodeContainer(
+        name='gridmap_container',
+        namespace='',
+        package='rclcpp_components',
+        executable='component_container',
+        arguments=['--ros-args', '--log-level', 'info'],
+        output='screen',
+        condition=IfCondition(use_gridmap),
+        composable_node_descriptions=[
+            gridmap_planner_component,
+        ],
     )
 
     # MAVROS
@@ -272,6 +313,8 @@ def generate_launch_description():
             'csi_cam/camera_info',
             # 2D lidar raw scan
             'scan',
+            # Grid map (when use_gridmap:=true)
+            'grid_map/occupancy_inflate',
             # TF
             '/tf',
             '/tf_static',
@@ -294,9 +337,11 @@ def generate_launch_description():
         bag_output_path_arg,
         rosbag_delay_arg,
         use_foxglove_arg,
+        use_gridmap_arg,
 
         # Nodes
         autonomy_stack_container,
+        gridmap_container,
         csi_camera_container,
         mavros_node,
         jsp_node,

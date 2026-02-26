@@ -105,7 +105,7 @@
             reset_odom_with_loop_closure: false # Re-initialize odometry to the last valid pose when loop closure happens (reset camera odometry drift)
             publish_3d_landmarks: false # Publish 3D landmarks used by the positional tracking algorithm
             publish_lm_skip_frame: 5 # Publish the landmarks every X frames to reduce bandwidth. Set to 0 to publish all landmarks
-            depth_min_range: 0.0 # Set this value for removing fixed zones of the robot in the FoV of the camerafrom the visual odometry evaluation
+            depth_min_range: 0.3 # Set this value for removing fixed zones of the robot in the FoV of the camerafrom the visual odometry evaluation
             set_as_static: false # If 'true' the camera will be static and not move in the environment
             set_gravity_as_origin: true # If 'true' align the positional tracking world to imu gravity measurement. Keep the yaw from the user initial pose.
             floor_alignment: false # Enable to automatically calculate camera/floor offset
@@ -118,7 +118,7 @@
             reset_pose_with_svo_loop: false # Reset the camera pose the `initial_base_pose` when the SVO loop is enabled and the SVO playback reaches the end of the file.
             publish_odom_pose: true # Advertise the odometry and pose topics that are published only if a node subscribes to them
             publish_pose_cov: true # Advertise the pose with covariance topic that is published only if a node subscribes to it
-            publish_cam_path: false # Advertise the camera odometry and pose path topics that are published only if a node subscribes to them
+            publish_cam_path: true # Advertise the camera odometry and pose path topics that are published only if a node subscribes to them
 
         gnss_fusion:
             gnss_fusion_enabled: false # fuse 'sensor_msg/NavSatFix' message information into pose data
