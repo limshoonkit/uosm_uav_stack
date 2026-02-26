@@ -5,7 +5,7 @@
       controller_mode: "feedforward"  # "feedforward" or "nmpc"
       starting_yaw_deg: 0.0
       time_forward: 1.0
-      takeoff_height: 1.0
+      takeoff_height: 2.0
       state_machine_rate: 5.0
       setpoint_publish_rate: 100.0
       request_timeout: 2.0

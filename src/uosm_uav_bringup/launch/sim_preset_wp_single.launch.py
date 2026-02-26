@@ -100,6 +100,7 @@ def generate_launch_description():
     
     waypoint_dir = get_package_share_directory('map_processor')
     waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'single_id_41.csv')
+    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm', 'uosm_indoor.csv')
 
     rviz_config_file = os.path.join(
         get_package_share_directory('uosm_uav_bringup'),
