@@ -14,3 +14,7 @@
 [submodule "src/third_party/ros2_jetson_stats"]
 	path = src/third_party/ros2_jetson_stats
 	url = https://github.com/NVIDIA-AI-IOT/ros2_jetson_stats
+
+[submodule "src/third_party/kiss-icp"]
+	path = src/third_party/kiss-icp
+	url = https://github.com/PRBonn/kiss-icp.git
