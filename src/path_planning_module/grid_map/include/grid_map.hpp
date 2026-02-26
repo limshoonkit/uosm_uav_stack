@@ -129,6 +129,11 @@ namespace ego_planner
         void visualizeMapCallback();
         void fadingCallback();
 
+        /** Get base_link pose in map frame at given time (from TF). Returns false if lookup fails. */
+        bool getBasePoseAtTime(const rclcpp::Time &time,
+                              Eigen::Matrix3d &R_out, Eigen::Vector3d &p_out,
+                              const rclcpp::Duration &timeout = rclcpp::Duration::from_seconds(0.05));
+
         // Core functions
         void moveRingBuffer();
         void raycastProcess();

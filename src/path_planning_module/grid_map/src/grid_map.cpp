@@ -219,6 +219,45 @@ namespace ego_planner
             return;
         }
 
+        // Transform from point cloud frame (e.g. zedm_camera_link) to base_link at cloud time
+        // so we fuse in map frame correctly; avoids misalignment when cloud is not in base_link
+        Eigen::Isometry3d cloud_to_base = Eigen::Isometry3d::Identity();
+        if (msg->header.frame_id != "base_link")
+        {
+            try
+            {
+                rclcpp::Time stamp(msg->header.stamp.sec, msg->header.stamp.nanosec);
+                auto tf_msg = tf_buffer_->lookupTransform(
+                    "base_link", msg->header.frame_id, stamp,
+                    rclcpp::Duration::from_seconds(0.05));
+                cloud_to_base.translation() = Eigen::Vector3d(
+                    tf_msg.transform.translation.x,
+                    tf_msg.transform.translation.y,
+                    tf_msg.transform.translation.z);
+                Eigen::Quaterniond q(
+                    tf_msg.transform.rotation.w,
+                    tf_msg.transform.rotation.x,
+                    tf_msg.transform.rotation.y,
+                    tf_msg.transform.rotation.z);
+                cloud_to_base.linear() = q.toRotationMatrix();
+            }
+            catch (tf2::TransformException &ex)
+            {
+                RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                                     "grid_map: cloud frame '%s' -> base_link failed (%s), assuming base_link",
+                                     msg->header.frame_id.c_str(), ex.what());
+            }
+        }
+
+        // Use pose at cloud time so 30 Hz odom vs 10 Hz cloud doesn't cause temporal mismatch
+        rclcpp::Time cloud_stamp(msg->header.stamp.sec, msg->header.stamp.nanosec);
+        Eigen::Matrix3d R_pose = data_.body_r_m_;
+        Eigen::Vector3d p_pose = data_.body_pos_;
+        if (!getBasePoseAtTime(cloud_stamp, R_pose, p_pose))
+        {
+            /* fallback: use latest odom (R_pose, p_pose already set above) */
+        }
+
         if (data_.pnts.size() < latest_cloud->points.size())
         {
             size_t new_size = static_cast<size_t>(latest_cloud->points.size() * 1.05); // extra 5% buffer
@@ -238,8 +277,9 @@ namespace ego_planner
             if (std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z))
                 continue;
 
-            Eigen::Vector3d pt(point.x, point.y, point.z);
-            double dist_sq = pt.squaredNorm();
+            Eigen::Vector3d pt_cloud(point.x, point.y, point.z);
+            Eigen::Vector3d pt_base = cloud_to_base * pt_cloud;
+            double dist_sq = pt_base.squaredNorm();
 
             // Filter out points too close to sensor
             if (dist_sq < params_.min_clearance_sq_)
@@ -259,8 +299,8 @@ namespace ego_planner
                 weight = 1.0f - (1.0f - static_cast<float>(params_.min_confidence_weight_)) * t;
             }
 
-            // Transform to world frame
-            Eigen::Vector3d pt_world = data_.body_r_m_ * pt + data_.body_pos_;
+            // Transform base_link -> map using pose at cloud time (time-sync with sensor)
+            Eigen::Vector3d pt_world = R_pose * pt_base + p_pose;
 
             data_.pnts[data_.pnts_cnt_] = pt_world;
             data_.pnt_weights_[data_.pnts_cnt_] = weight;
@@ -319,6 +359,31 @@ namespace ego_planner
                     changeInfBuf(true, inf_buf_id, idx);
                 }
             }
+        }
+    }
+
+    bool GridMap::getBasePoseAtTime(const rclcpp::Time &time,
+                                   Eigen::Matrix3d &R_out, Eigen::Vector3d &p_out,
+                                   const rclcpp::Duration &timeout)
+    {
+        try
+        {
+            auto tf_msg = tf_buffer_->lookupTransform(
+                params_.frame_id_, "base_link", time, timeout);
+            p_out(0) = tf_msg.transform.translation.x;
+            p_out(1) = tf_msg.transform.translation.y;
+            p_out(2) = tf_msg.transform.translation.z;
+            Eigen::Quaterniond q(
+                tf_msg.transform.rotation.w,
+                tf_msg.transform.rotation.x,
+                tf_msg.transform.rotation.y,
+                tf_msg.transform.rotation.z);
+            R_out = q.toRotationMatrix();
+            return true;
+        }
+        catch (tf2::TransformException &)
+        {
+            return false;
         }
     }
 
@@ -394,6 +459,12 @@ namespace ego_planner
                 return;
         }
 
+        // Use pose at scan time so odom rate vs scan rate mismatch doesn't cause temporal error
+        rclcpp::Time scan_stamp(msg->header.stamp.sec, msg->header.stamp.nanosec);
+        Eigen::Matrix3d R_pose = data_.body_r_m_;
+        Eigen::Vector3d p_pose = data_.body_pos_;
+        getBasePoseAtTime(scan_stamp, R_pose, p_pose);
+
         // Ensure point buffer has capacity for scan points
         const size_t scan_size = msg->ranges.size();
         if (data_.pnts.size() < scan_size)
@@ -433,8 +504,8 @@ namespace ego_planner
             // Transform to body frame using cached static TF
             Eigen::Vector3d pt_body = laser_to_body_ * pt_laser;
 
-            // Transform to world frame
-            Eigen::Vector3d pt_world = data_.body_r_m_ * pt_body + data_.body_pos_;
+            // Transform to world frame using pose at scan time (time-sync with sensor)
+            Eigen::Vector3d pt_world = R_pose * pt_body + p_pose;
 
             data_.pnts[data_.pnts_cnt_] = pt_world;
             data_.pnt_weights_[data_.pnts_cnt_] = 1.0f; // LiDAR: full confidence
