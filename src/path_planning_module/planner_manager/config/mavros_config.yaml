@@ -71,7 +71,7 @@
   ros__parameters:
     frame_id: "odom"              # origin frame
     tf:
-      send: false                 # Disabled: odom_republisher owns odom -> base_link TF
+      send: true
       frame_id: "odom"
       child_frame_id: "base_link"
       send_fcu: false
