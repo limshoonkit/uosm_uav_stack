@@ -9,7 +9,7 @@
       state_machine_rate: 5.0
       setpoint_publish_rate: 100.0
       request_timeout: 2.0
-      hover_period: 15.0
+      hover_period: 10.0
       preflight_check_timeout: 3.0
       max_manual_target_allowed: 3
       frame_id: "map"

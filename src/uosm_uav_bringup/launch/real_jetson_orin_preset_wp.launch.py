@@ -1,7 +1,7 @@
 #!/usr/bin/env python3i
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction, SetEnvironmentVariable
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import ComposableNodeContainer, LoadComposableNodes, Node
@@ -17,6 +17,31 @@ def generate_launch_description():
 
     # LaunchConfiguration
     use_foxglove = LaunchConfiguration('use_foxglove')
+    use_rosbag = LaunchConfiguration('use_rosbag')
+    bag_output_path = LaunchConfiguration('bag_output_path')
+    rosbag_delay = LaunchConfiguration('rosbag_delay')
+
+    # Declare launch argument to enable ROS2 bag recording
+    use_rosbag_arg = DeclareLaunchArgument(
+        'use_rosbag',
+        default_value='false',
+        description='Whether to record ROS2 bag',
+        choices=['true', 'false']
+    )
+
+    # Declare launch argument for bag output path
+    bag_output_path_arg = DeclareLaunchArgument(
+        'bag_output_path',
+        default_value='bags/real/test_auto_1', # relative
+        description='Output directory for ROS2 bag files'
+    )
+
+    # Declare launch argument for rosbag startup delay
+    rosbag_delay_arg = DeclareLaunchArgument(
+        'rosbag_delay',
+        default_value='10.0',
+        description='Delay in seconds before starting rosbag recording (wait for sensors)'
+    )
 
     # Declare launch argument to enable foxglove
     use_foxglove_arg = DeclareLaunchArgument(
@@ -48,9 +73,14 @@ def generate_launch_description():
     planner_config = os.path.join(bringup_package, 'config', 'planner.yaml')
     zed_config_common = os.path.join(bringup_package, 'config', 'sensor_config', 'common_stereo.yaml')
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm.yaml')
+    # zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
 
     waypoint_dir = get_package_share_directory('map_processor')
-    waypoint_config = os.path.join(waypoint_dir, 'maps', 'uosm', 'uosm_indoor.csv') # NOTE: Change preset wp here!
+    waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'single_id_41.csv')
+    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'triple_id_23_40_52.csv')
+
+    mcap_options = os.path.join(bringup_package, 'config', 'mcap_writer_options.yaml')
+    qos_overrides = os.path.join(bringup_package, 'config', 'qos_overrides.yaml')
 
     trunk_seg_dir = get_package_share_directory('trunk_segmentation')
     trunk_seg_config = os.path.join(trunk_seg_dir, 'config', 'trunk_segmentation_params.yaml')
@@ -313,11 +343,49 @@ def generate_launch_description():
         output='screen'
     )
 
+    # Jetson stats diagnostics node (only when recording)
+    jetson_stats_node = Node(
+        package='ros2_jetson_stats',
+        executable='ros2_jtop',
+        name='ros2_jtop',
+        condition=IfCondition(use_rosbag),
+        output='screen',
+    )
+
+    # ROS2 bag recording with delay for sensor initialization
+    rosbag_record = TimerAction(
+        period=rosbag_delay,
+        condition=IfCondition(use_rosbag),
+        actions=[
+            ExecuteProcess(
+                cmd=[
+                    'ros2', 'bag', 'record',
+                    '-o', bag_output_path,
+                    '--storage', 'mcap',  # mcap, sqlite3
+                    '--storage-config-file', mcap_options,
+                    '--qos-profile-overrides-path', qos_overrides,
+                    # Jetson diagnostics
+                    '/diagnostics',
+                    # Mavros odometry
+                    '/mavros/odometry/out',
+                    # CSI camera
+                    '/csi_cam/image_raw/compressed',
+                    # Grid map
+                    '/grid_map/occupancy_inflate',
+                ],
+                output='screen',
+            )
+        ],
+    )
+
     return LaunchDescription([
         # Use CycloneDDS with default network settings
         set_rmw,
 
         # Launch arguments
+        use_rosbag_arg,
+        bag_output_path_arg,
+        rosbag_delay_arg,
         use_foxglove_arg,
         wait_for_alignment_arg,
 
@@ -329,4 +397,6 @@ def generate_launch_description():
         jsp_node,
         map_to_odom_tf,
         foxglove_bridge_node,
+        jetson_stats_node,
+        rosbag_record,
     ])

@@ -30,7 +30,7 @@ def generate_launch_description():
     # Declare launch argument for bag output path
     bag_output_path_arg = DeclareLaunchArgument(
         'bag_output_path',
-        default_value='bags/real/test1', # relative
+        default_value='bags/real/test_manual_1', # relative
         description='Output directory for ROS2 bag files'
     )
 
@@ -56,7 +56,6 @@ def generate_launch_description():
         choices=['true', 'false']
     )
 
-    # Use CycloneDDS with default network settings (allows Foxglove websocket to work)
     set_rmw = SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp')
 
     # Configuration paths
@@ -313,7 +312,7 @@ def generate_launch_description():
             'csi_cam/camera_info',
             # 2D lidar raw scan
             'scan',
-            # Grid map (when use_gridmap:=true)
+            # Grid map
             'grid_map/occupancy_inflate',
             # TF
             '/tf',
