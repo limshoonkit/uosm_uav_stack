@@ -2,12 +2,12 @@
   ros__parameters:
     # src/path_planning_module/planner_manager/include/ego_planner_component.cpp
     planner:
-      flight_height: 2.0
+      flight_height: 2.5
       planner_freq: 50.0  # in Hz (25 ~ 100)
       collision_check_freq: 25.0
       max_vel: 0.75
       max_acc: 2.0
-      orbit_flight_height: 2.0
+      orbit_flight_height: 3.0
       orbit_max_vel: 0.5
       orbit_max_acc: 1.5
       emergency_time: 0.8
