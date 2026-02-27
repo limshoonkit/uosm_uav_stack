@@ -39,8 +39,9 @@ def generate_launch_description():
     zed_config_camera = os.path.join(bringup_package, 'config', 'sensor_config', 'zedm_gen3.yaml')
 
     waypoint_dir = get_package_share_directory('map_processor')
-    waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'single_id_26.csv')
-    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'triple_id_23_40_52.csv')
+    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'single_id_26.csv')
+    waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'triple_id_23_26_51.csv')
+    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'penta_id_20_23_26_51_52.csv')
 
     # Flight controller (no alignment wait)
     fc_component = ComposableNode(

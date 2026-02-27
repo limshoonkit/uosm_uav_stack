@@ -91,7 +91,7 @@ source install/setup.bash
 # ros2 launch uosm_uav_bringup real_jetson_orin_interactive.launch.py use_foxglove:=true
 ros2 launch uosm_uav_bringup real_jetson_orin_preset_wp.launch.py use_foxglove:=true wait_for_alignment:=true use_rosbag:=true
 
-ros2 launch uosm_uav_bringup real_minimal_launch.launch.py use_foxglove:=true
+ros2 launch uosm_uav_bringup real_minimal.launch.py use_foxglove:=true
 ```
 
 ## Package Overview
