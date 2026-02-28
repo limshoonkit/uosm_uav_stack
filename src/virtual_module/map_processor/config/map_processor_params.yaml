@@ -3,8 +3,8 @@ map_processor_node:
   ros__parameters:
     voxel_leaf_size: 0.1
     starting_point:
-      x: -5.8
-      y: -8.8
+      x: 0.05
+      y: -4.70
       z: 2.0
     map_bounds:
       min_x: -80.0

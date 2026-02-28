@@ -14,6 +14,6 @@ map_alignment_node:
     convergence_threshold: 0.001        # Convergence threshold for SVD
     voxel_leaf_size: 0.1                # Voxel grid leaf size for downsampling (0 = no downsampling)
     initial_yaw_rad: 0.0                # Initial guess for yaw rotation (radians)
-    starting_point_x: -5.8              # Initial guess for x translation (meters)
-    starting_point_y: -8.8              # Initial guess for y translation (meters)
+    starting_point_x: 0.05             # Initial guess for x translation (meters)
+    starting_point_y: -4.70             # Initial guess for y translation (meters)
     max_alignment_attempts: 10          # Max attempts before giving up (triggers FC landing via timeout)

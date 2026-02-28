@@ -6,3 +6,9 @@ __pycache__/
 *.pyc
 
 acados_generated/
+
+*.mp4
+*.MOV
+*.webm
+*.avi
+*.mkv

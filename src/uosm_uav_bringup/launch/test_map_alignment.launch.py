@@ -13,6 +13,9 @@ Usage:
   # Adjust PCD vertical offset:
   ros2 launch uosm_uav_bringup test_map_alignment.launch.py pcd_z_offset:=1.5
 
+  # Use Foxglove instead of RViz (use_rviz:=false launches Foxglove by default):
+  ros2 launch uosm_uav_bringup test_map_alignment.launch.py use_rviz:=false
+
 Topics expected from bag:
   - /mavros/odometry/out       (nav_msgs/msg/Odometry)
   - /scan                      (sensor_msgs/msg/LaserScan)
@@ -28,7 +31,7 @@ from launch.actions import (
     ExecuteProcess,
     OpaqueFunction,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
@@ -57,15 +60,15 @@ def _launch_setup(context, *args, **kwargs):
 
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(map_align_dir, 'config', 'map_alignment_params.yaml')
-    map_pcd_path = os.path.join(map_align_dir, 'maps', 'tuanmee_site.pcd')
+    map_pcd_path = os.path.join(map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
 
     map_proc_dir = get_package_share_directory('map_processor')
     map_proc_config = os.path.join(map_proc_dir, 'config', 'map_processor_params.yaml')
-    map_proc_pcd_path = os.path.join(map_proc_dir, 'maps', 'tuanmee_site.pcd')
+    map_proc_pcd_path = os.path.join(map_proc_dir, 'maps', 'klk', 'tuanmee_site.pcd')
 
     waypoint_csv = LaunchConfiguration('waypoint_csv').perform(context)
     if not waypoint_csv:
-        waypoint_csv = os.path.join(map_proc_dir, 'maps', 'id_41.csv')
+        waypoint_csv = os.path.join(map_proc_dir, 'maps', 'klk', 'single_id_26.csv')
 
     # Trunk segmentation
     trunk_seg_component = ComposableNode(
@@ -247,6 +250,19 @@ def _launch_setup(context, *args, **kwargs):
         condition=IfCondition(use_rviz),
     )
 
+    # Foxglove bridge when RViz is disabled
+    foxglove_bridge_node = Node(
+        package='foxglove_bridge',
+        executable='foxglove_bridge',
+        name='foxglove_bridge',
+        output='screen',
+        parameters=[
+            {'use_sim_time': True},
+            {'port': 8765},
+        ],
+        condition=UnlessCondition(use_rviz),
+    )
+
     # Bag playback
     use_bag_player = LaunchConfiguration('use_bag_player')
     bag_play = ExecuteProcess(
@@ -263,6 +279,7 @@ def _launch_setup(context, *args, **kwargs):
         odom_to_tf_node,
         jsp_node,
         rviz_node,
+        foxglove_bridge_node,
         bag_play,
     ]
 
@@ -289,7 +306,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'bag_path',
-            default_value='./bags/test_distance',
+            default_value='./bags/real/klk/test_manual_1_decoded',
             description='Path to the rosbag to play',
         ),
         DeclareLaunchArgument(
