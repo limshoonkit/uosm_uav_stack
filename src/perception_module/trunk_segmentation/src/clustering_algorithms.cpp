@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "../include/clustering_algorithms.hpp"
 
 #include <algorithm>

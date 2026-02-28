@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 sudo apt update && sudo apt upgrade -y
 
-sudo apt install libpcl-dev libeigen3-dev -y
+sudo apt install libpcl-dev libeigen3-dev libgtsam-dev -y
 sudo pip3 install -U jetson-stats
 sudo apt install \
     ros-humble-rosbag2-storage-mcap \

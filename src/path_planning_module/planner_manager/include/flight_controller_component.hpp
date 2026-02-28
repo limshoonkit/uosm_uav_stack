@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Portions adapted from EGO-Planner-v2: https://github.com/ZJU-FAST-Lab/EGO-Planner-v2
+ */
+
 #ifndef FLIGHT_CONTROLLER_COMPONENT_HPP_
 #define FLIGHT_CONTROLLER_COMPONENT_HPP_
 

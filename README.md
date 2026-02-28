@@ -1,5 +1,7 @@
 # UoSM UAV Stack
 
+A complete PX4-based autonomous UAV stack using a stereo camera (ZEDM) and 2D LiDAR (RPLidar S1) for under-canopy surveying in oil palm plantations.
+Virtual map generation and global path planning are available at [PalmOilDetectree2](https://github.com/limshoonkit/PalmOilDetectree2/).
 
 ## Prerequisites
 
@@ -8,13 +10,19 @@
 
 ## A. Build
 
-TBD
+Install dependencies:
 ```bash
 chmod +x ./scripts/setup.sh
 ./scripts/setup.sh
 ```
 
-Experimental nmpc
+Build workspace:
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)
+```
+
+Optional: experimental NMPC setup
 ```bash
 # 1. Build acados vendor package
 colcon build --packages-select acados_vendor_ros2
@@ -33,10 +41,6 @@ cd ../../../
 
 # 5. Build the NMPC controller
 colcon build --packages-select nmpc_controller
-```
-
-```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)
 ```
 
 ## B. Run the Simulation
@@ -79,13 +83,21 @@ source install/setup.bash
 ros2 launch uosm_uav_bringup reboot_px4.launch.py
 ```
 
-Sanity check to make sure hardware working as expected, also to test PX4 params tuning whether vehicle can hover stabily and other analysis (vibration metric, ekf2, pid control, battery), this enable vehicle to fly in position mode without GNSS
+Sanity check for hardware and PX4 tuning (hover stability, vibration metrics, EKF2 health, PID behavior, battery). This helps confirm stable position-mode flight without GNSS.
 ```bash
 source install/setup.bash
 ros2 launch uosm_uav_bringup real_sanity_check.launch.py use_rosbag:=false
 ```
 
-**IMPORTANT**: Real flight, make sure to fly in safe area
+**IMPORTANT**: Real flight, make sure to fly in safe area.
+Preflight checklist:
+- Verify RC kill switch and failsafe behavior.
+- Confirm battery level above arm threshold.
+- Verify EKF2 and local position estimate are healthy. ReCalibrate if needed.
+- Confirm long range telemetry working to maintainn ground control link.
+- Confirm wifi/network static ip and dds setup correctly. 
+
+**KNOWN ISSUE**: For rosbag recording, avoid recording too many heavy topics; File I/O operation can significantly impact flight performance.
 ```bash
 source install/setup.bash
 # ros2 launch uosm_uav_bringup real_jetson_orin_interactive.launch.py use_foxglove:=true
@@ -94,19 +106,48 @@ ros2 launch uosm_uav_bringup real_jetson_orin_preset_wp.launch.py use_foxglove:=
 ros2 launch uosm_uav_bringup real_minimal.launch.py use_foxglove:=true
 ```
 
-## Package Overview
+## Repository Overview
 
-| Package | Description |
+### Root layout
+
+| Path | Purpose |
 |---|---|
-| `nmpc_controller` | Acados-based NMPC solver (C++ library) |
-| `acados_vendor_ros2` | ROS 2 vendor package for acados |
-| `planner_manager` | Ego planner + flight controller components |
-| `uosm_uav_bringup` | Launch files and configs |
-| `uosm_uav_interface` | Custom ROS 2 message definitions |
-| `grid_map` | Occupancy grid for planning |
-| `planner_utils` | Polynomial trajectory utilities |
-| `local_sensing` | Simulated depth camera |
-| `map_processor` | Point cloud map loading |
-| `odom_visualization` | Odometry visualization in RViz |
-| `pose_utils` | Pose/transform utilities |
-| `uosm_robot_viewer` | URDF model and robot state publisher |
+| `src/` | Main ROS 2 packages |
+| `scripts/` | Setup and helper scripts |
+| `bags/` | Recorded rosbag data (real and simulation) |
+| `px4_related/` | PX4 params and related artifacts |
+| `jetson_config/` | Jetson device-specific configs |
+| `build/`, `install/` | Colcon build outputs |
+
+### `src/` package structure
+
+| Group | Main packages | Purpose |
+|---|---|---|
+| Core bringup and interfaces | `uosm_uav_bringup`, `uosm_uav_interface`, `uosm_robot_viewer` | System launch/config, custom interfaces, robot model visualization |
+| Planning and control | `nmpc_controller`, `path_planning_module/grid_map`, `path_planning_module/planner_manager`, `path_planning_module/planner_utils` | NMPC trajectory tracking, occupancy mapping, planning, trajectory utilities |
+| Perception | `perception_module/odom_republisher`, `perception_module/map_alignment`, `perception_module/trunk_segmentation`, `perception_module/jetson_gscam2`, `perception_module/sllidar_ros2`, `perception_module/zed-ros2-wrapper` | Odometry fusion/alignment, sensing, camera/lidar integration |
+| Virtual and simulation support | `virtual_module/local_sensing`, `virtual_module/map_processor`, `virtual_module/odom_visualization`, `virtual_module/pose_utils` | Simulated sensing, map loading, odometry display, pose/transform helpers |
+| Third-party vendors/tools | `third_party/acados_vendor_ros2`, `third_party/ros2_jetson_stats` | External solver and Jetson monitoring integration |
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+See [LICENSE](./LICENSE) for full terms.
+
+## Citation???
+
+Cite so that my supervisor can keep his job and get a promotion.
+
+```bibtex
+@article{uosm_uav_stack,
+  title   = {xxx},
+  author  = {Janitor},
+  year    = {2026},
+  url     = {xxx},
+  note    = {xxx}
+}
+```
+
+## Contact
+
+- Email: skl1g14@soton.ac.uk / lsk950329@hotmail.com

@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Portions adapted from EGO-Planner-v2: https://github.com/ZJU-FAST-Lab/EGO-Planner-v2
+ */
+
 #include "../include/grid_map_cuda.cuh"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h> // For blockIdx, threadIdx, etc.

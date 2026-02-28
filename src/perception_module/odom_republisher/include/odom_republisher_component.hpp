@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef ODOM_REPUBLISHER_COMPONENT_HPP_
 #define ODOM_REPUBLISHER_COMPONENT_HPP_
 

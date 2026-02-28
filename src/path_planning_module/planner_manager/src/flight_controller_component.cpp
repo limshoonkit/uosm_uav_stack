@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Portions adapted from EGO-Planner-v2: https://github.com/ZJU-FAST-Lab/EGO-Planner-v2
+ */
+
 #include "flight_controller_component.hpp"
 #include <nmpc_controller/nmpc_controller.hpp>
 #include <node_params.hpp>

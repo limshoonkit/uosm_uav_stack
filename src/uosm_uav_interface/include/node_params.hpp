@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #pragma once
 
 #include <rclcpp/rclcpp.hpp>

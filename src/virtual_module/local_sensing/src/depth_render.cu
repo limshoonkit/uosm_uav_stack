@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Portions adapted from EGO-Planner-v2: https://github.com/ZJU-FAST-Lab/EGO-Planner-v2
+ */
+
 #include "depth_render.cuh"
 __global__ void render(float3 *data_devptr, Parameter *para_devptr, DeviceImage<int> *depth_devptr)
 {

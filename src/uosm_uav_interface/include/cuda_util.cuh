@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef CUDA_UTIL_CUH_
 #define CUDA_UTIL_CUH_
 

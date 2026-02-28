@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "../include/trunk_seg_viz.hpp"
 
 std_msgs::msg::ColorRGBA generateRandomColor(size_t id)

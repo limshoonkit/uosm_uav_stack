@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef NMPC_CONTROLLER__NMPC_CONTROLLER_HPP_
 #define NMPC_CONTROLLER__NMPC_CONTROLLER_HPP_
 

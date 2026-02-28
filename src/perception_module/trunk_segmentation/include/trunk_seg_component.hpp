@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: University of Southampton Malaysia
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef TRUNK_SEG_COMPONENT_HPP_
 #define TRUNK_SEG_COMPONENT_HPP_
 
