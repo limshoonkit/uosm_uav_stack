@@ -45,8 +45,8 @@ class MockTrunkPublisher(Node):
             10
         )
         
-        # Known trunk positions in MAP frame (should match your PCD map after recentering)
-        # These are example positions - adjust to match your actual map
+        # Known trunk positions in MAP frame
+        # These are example positions
         self.trunk_positions_map = [
             (-2.0, 1.5),
             (0.0, 3.0),

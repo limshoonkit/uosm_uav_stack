@@ -36,7 +36,6 @@ target_include_directories(map_alignment_component PUBLIC
 ament_target_dependencies(map_alignment_component
     rclcpp
     rclcpp_components
-    composition_interfaces
     std_msgs
     std_srvs
     geometry_msgs

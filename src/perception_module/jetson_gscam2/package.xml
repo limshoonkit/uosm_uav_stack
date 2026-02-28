@@ -17,6 +17,7 @@
   <depend>cv_bridge</depend>
   <depend>std_msgs</depend>
   <depend>foxglove_msgs</depend>
+  <depend>uosm_uav_interface</depend>
   <depend>libopencv-dev</depend>
   <depend>libgstreamer1.0-dev</depend>
   <depend>libgstreamer-plugins-base1.0-dev</depend>

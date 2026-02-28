@@ -14,6 +14,7 @@ find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
 find_package(Eigen3 REQUIRED)
+find_package(GTSAM REQUIRED)
 
 add_library(odom_republisher_component SHARED
   src/odom_republisher_component.cpp
@@ -38,6 +39,7 @@ ament_target_dependencies(odom_republisher_component
 
 target_link_libraries(odom_republisher_component
   ${EIGEN3_LIBRARIES}
+  gtsam
 )
 
 target_compile_definitions(odom_republisher_component PRIVATE
@@ -56,6 +58,11 @@ install(TARGETS odom_republisher_component
 install(
   DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
+)
+
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 ament_export_include_directories(include)

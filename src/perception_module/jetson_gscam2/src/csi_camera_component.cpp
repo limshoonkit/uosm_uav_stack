@@ -10,6 +10,7 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/video/video.h>
+#include "node_params.hpp"
 #include <memory>
 #include <string>
 #include <thread>
@@ -26,68 +27,35 @@ namespace uosm
             explicit CSICameraComponent(const rclcpp::NodeOptions &options)
                 : Node("csi_camera_node", options)
             {
-                // Declare parameters
-                sensor_id_ = declare_parameter<int>("sensor_id", 0);
-                sensor_mode_ = declare_parameter<int>("sensor_mode", -1);
-                input_width_ = declare_parameter<int>("input_width", 1920);
-                input_height_ = declare_parameter<int>("input_height", 1080);
-                output_width_ = declare_parameter<int>("output_width", 640);
-                output_height_ = declare_parameter<int>("output_height", 360);
-                framerate_ = declare_parameter<int>("framerate", 30);
-                output_framerate_ = declare_parameter<int>("output_framerate", 24);
-                frame_id_ = declare_parameter<std::string>("frame_id", "camera_frame");
-                auto camera_name = declare_parameter<std::string>("camera_name", "csi_camera");
-                auto camera_info_url = declare_parameter<std::string>("camera_info_url", "");
-                enable_encoding_ = declare_parameter<bool>("enable_encoding", true);
-                encoding_format_ = declare_parameter<std::string>("encoding_format", "h264");
-                encoding_bitrate_ = declare_parameter<int>("encoding_bitrate", 4000000);
-                publish_raw_ = declare_parameter<bool>("publish_raw", true);
-                publish_compressed_ = declare_parameter<bool>("publish_compressed", true);
-                tnr_mode_ = declare_parameter<int>("tnr_mode", 1);  // 0=off, 1=fast, 2=high_quality
-                tnr_strength_ = declare_parameter<double>("tnr_strength", 0.5);  // -1 to 1
-                ee_mode_ = declare_parameter<int>("ee_mode", 1);  // 0=off, 1=fast, 2=high_quality
-                ee_strength_ = declare_parameter<double>("ee_strength", 0.3);  // -1 to 1
-                wbmode_ = declare_parameter<int>("wbmode", 1);  // 0=off, 1=auto, 2-9=manual modes
-                aeantibanding_ = declare_parameter<int>("aeantibanding", 1);  // 0=off, 1=auto, 2=50Hz, 3=60Hz
-                saturation_ = declare_parameter<double>("saturation", 1.1);  // 0 to 2
-                exposurecompensation_ = declare_parameter<double>("exposurecompensation", 0.0);  // -2 to 2
-                max_buffers_ = declare_parameter<int>("max_buffers", 2);
-                drop_frames_ = declare_parameter<bool>("drop_frames", true);
-                leaky_queue_ = declare_parameter<bool>("leaky_queue", true);
-                sync_appsink_ = declare_parameter<bool>("sync_appsink", false);
-                encoder_preset_ = declare_parameter<int>("encoder_preset", 1);  // 0=ultrafast, 1=fast, 2=medium, 3=slow
-
-                RCLCPP_INFO(get_logger(), " * CSI Camera Parameter");
-                RCLCPP_INFO(get_logger(), " *   sensor_id: %d", sensor_id_);
-                RCLCPP_INFO(get_logger(), " *   sensor_mode: %d", sensor_mode_);
-                RCLCPP_INFO(get_logger(), " *   input_width: %d", input_width_);
-                RCLCPP_INFO(get_logger(), " *   input_height: %d", input_height_);
-                RCLCPP_INFO(get_logger(), " *   output_width: %d", output_width_);
-                RCLCPP_INFO(get_logger(), " *   output_height: %d", output_height_);
-                RCLCPP_INFO(get_logger(), " *   framerate: %d", framerate_);
-                RCLCPP_INFO(get_logger(), " *   output_framerate: %d", output_framerate_);
-                RCLCPP_INFO(get_logger(), " *   frame_id: %s", frame_id_.c_str());
-                RCLCPP_INFO(get_logger(), " *   camera_name: %s", camera_name.c_str());
-                RCLCPP_INFO(get_logger(), " *   camera_info_url: %s", camera_info_url.c_str());
-                RCLCPP_INFO(get_logger(), " *   enable_encoding: %s", enable_encoding_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " *   encoding_format: %s", encoding_format_.c_str());
-                RCLCPP_INFO(get_logger(), " *   encoding_bitrate: %d", encoding_bitrate_);
-                RCLCPP_INFO(get_logger(), " *   publish_raw: %s", publish_raw_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " *   publish_compressed: %s", publish_compressed_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " * Camera Optimization Parameters:");
-                RCLCPP_INFO(get_logger(), " *   tnr_mode: %d", tnr_mode_);
-                RCLCPP_INFO(get_logger(), " *   tnr_strength: %.2f", tnr_strength_);
-                RCLCPP_INFO(get_logger(), " *   ee_mode: %d", ee_mode_);
-                RCLCPP_INFO(get_logger(), " *   ee_strength: %.2f", ee_strength_);
-                RCLCPP_INFO(get_logger(), " *   wbmode: %d", wbmode_);
-                RCLCPP_INFO(get_logger(), " *   aeantibanding: %d", aeantibanding_);
-                RCLCPP_INFO(get_logger(), " *   saturation: %.2f", saturation_);
-                RCLCPP_INFO(get_logger(), " *   exposurecompensation: %.2f", exposurecompensation_);
-                RCLCPP_INFO(get_logger(), " *   max_buffers: %d", max_buffers_);
-                RCLCPP_INFO(get_logger(), " *   drop_frames: %s", drop_frames_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " *   leaky_queue: %s", leaky_queue_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " *   sync_appsink: %s", sync_appsink_ ? "true" : "false");
-                RCLCPP_INFO(get_logger(), " *   encoder_preset: %d", encoder_preset_);
+                sensor_id_ = util::getParam<int>(this, "sensor_id", 0, "  sensor_id: ");
+                sensor_mode_ = util::getParam<int>(this, "sensor_mode", -1, "  sensor_mode: ");
+                input_width_ = util::getParam<int>(this, "input_width", 1920, "  input_width: ");
+                input_height_ = util::getParam<int>(this, "input_height", 1080, "  input_height: ");
+                output_width_ = util::getParam<int>(this, "output_width", 640, "  output_width: ");
+                output_height_ = util::getParam<int>(this, "output_height", 360, "  output_height: ");
+                framerate_ = util::getParam<int>(this, "framerate", 30, "  framerate: ");
+                output_framerate_ = util::getParam<int>(this, "output_framerate", 24, "  output_framerate: ");
+                frame_id_ = util::getParam<std::string>(this, "frame_id", "camera_frame", "  frame_id: ");
+                auto camera_name = util::getParam<std::string>(this, "camera_name", "csi_camera", "  camera_name: ");
+                auto camera_info_url = util::getParam<std::string>(this, "camera_info_url", "", "  camera_info_url: ");
+                enable_encoding_ = util::getParam<bool>(this, "enable_encoding", true, "  enable_encoding: ");
+                encoding_format_ = util::getParam<std::string>(this, "encoding_format", "h264", "  encoding_format: ");
+                encoding_bitrate_ = util::getParam<int>(this, "encoding_bitrate", 4000000, "  encoding_bitrate: ");
+                publish_raw_ = util::getParam<bool>(this, "publish_raw", true, "  publish_raw: ");
+                publish_compressed_ = util::getParam<bool>(this, "publish_compressed", true, "  publish_compressed: ");
+                tnr_mode_ = util::getParam<int>(this, "tnr_mode", 1, "  tnr_mode: ");
+                tnr_strength_ = util::getParam<double>(this, "tnr_strength", 0.5, "  tnr_strength: ");
+                ee_mode_ = util::getParam<int>(this, "ee_mode", 1, "  ee_mode: ");
+                ee_strength_ = util::getParam<double>(this, "ee_strength", 0.3, "  ee_strength: ");
+                wbmode_ = util::getParam<int>(this, "wbmode", 1, "  wbmode: ");
+                aeantibanding_ = util::getParam<int>(this, "aeantibanding", 1, "  aeantibanding: ");
+                saturation_ = util::getParam<double>(this, "saturation", 1.1, "  saturation: ");
+                exposurecompensation_ = util::getParam<double>(this, "exposurecompensation", 0.0, "  exposurecompensation: ");
+                max_buffers_ = util::getParam<int>(this, "max_buffers", 2, "  max_buffers: ");
+                drop_frames_ = util::getParam<bool>(this, "drop_frames", true, "  drop_frames: ");
+                leaky_queue_ = util::getParam<bool>(this, "leaky_queue", true, "  leaky_queue: ");
+                sync_appsink_ = util::getParam<bool>(this, "sync_appsink", false, "  sync_appsink: ");
+                encoder_preset_ = util::getParam<int>(this, "encoder_preset", 1, "  encoder_preset: ");
 
                 cinfo_manager_ = std::make_shared<camera_info_manager::CameraInfoManager>(this, camera_name);
                 if (cinfo_manager_->loadCameraInfo(camera_info_url))
@@ -188,16 +156,19 @@ namespace uosm
 
                 // Queue settings for low latency
                 std::string queue_settings = "queue max-size-buffers=" + std::to_string(max_buffers_);
-                if (leaky_queue_) {
+                if (leaky_queue_)
+                {
                     queue_settings += " leaky=downstream";
                 }
 
                 // AppSink settings for low latency
                 std::string appsink_settings = " max-buffers=" + std::to_string(max_buffers_);
-                if (drop_frames_) {
+                if (drop_frames_)
+                {
                     appsink_settings += " drop=true";
                 }
-                if (!sync_appsink_) {
+                if (!sync_appsink_)
+                {
                     appsink_settings += " sync=false";
                 }
 
@@ -207,9 +178,9 @@ namespace uosm
                     // both raw and compressed
                     std::string encoder = (encoding_format_ == "h265") ? "nvv4l2h265enc" : "nvv4l2h264enc";
                     std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) +
-                                                 " preset-level=" + std::to_string(encoder_preset_) +
-                                                 " profile=0 insert-sps-pps=true";
-                    
+                                                   " preset-level=" + std::to_string(encoder_preset_) +
+                                                   " profile=0 insert-sps-pps=true";
+
                     pipeline_str = processing_pipeline + " ! tee name=t " +
                                    "t. ! " + queue_settings + " ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! appsink name=raw_sink" + appsink_settings + " " +
                                    "t. ! " + queue_settings + " ! " + encoder_settings + " ! " +
@@ -226,9 +197,9 @@ namespace uosm
                     // compressed
                     std::string encoder = (encoding_format_ == "h265") ? "nvv4l2h265enc" : "nvv4l2h264enc";
                     std::string encoder_settings = encoder + " bitrate=" + std::to_string(encoding_bitrate_) +
-                                                 " preset-level=" + std::to_string(encoder_preset_) +
-                                                 " profile=0 insert-sps-pps=true";
-                    
+                                                   " preset-level=" + std::to_string(encoder_preset_) +
+                                                   " profile=0 insert-sps-pps=true";
+
                     pipeline_str = processing_pipeline + " ! " + encoder_settings + " ! " +
                                    ((encoding_format_ == "h265") ? "video/x-h265" : "video/x-h264") + ",stream-format=byte-stream ! appsink name=encoded_sink" + appsink_settings;
                 }
@@ -476,7 +447,7 @@ namespace uosm
             int aeantibanding_;
             double saturation_;
             double exposurecompensation_;
-            
+
             // Pipeline parameters
             int max_buffers_;
             bool drop_frames_;

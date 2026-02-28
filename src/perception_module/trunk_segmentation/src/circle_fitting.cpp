@@ -5,8 +5,6 @@
 #include <limits>
 #include <iostream>
 
-
-
 CircleFitting::CircleFitting(const CircleFittingParams &params) : params_(params)
 {
     max_center_distance_sq_ = params_.max_center_distance * params_.max_center_distance;

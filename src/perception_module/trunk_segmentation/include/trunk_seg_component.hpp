@@ -23,6 +23,7 @@
 
 #include "uosm_uav_interface/msg/trunk_observation.hpp"
 #include "uosm_uav_interface/msg/trunk_observation_array.hpp"
+#include "node_params.hpp"
 
 #include "circle_fitting.hpp"
 #include "clustering_algorithms.hpp"

@@ -2,7 +2,7 @@
 <package format="2">
   <name>odom_republisher</name>
   <version>0.0.0</version>
-  <description>Transforms VIO odometry from camera frame to base_link and republishes</description>
+  <description>Transforms VIO odometry from camera frame to base_link with optional iSAM2 landmark fusion</description>
 
   <maintainer email="skl1g14@soton.ac.uk">Janitor</maintainer>
 
@@ -22,6 +22,7 @@
   <depend>launch</depend>
   <depend>launch_ros</depend>
   <depend>ament_index_python</depend>
+  <depend>gtsam</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -14,39 +14,22 @@ namespace uosm
             RCLCPP_INFO(get_logger(), " * node name: %s", get_name());
             RCLCPP_INFO(get_logger(), "********************************");
 
-            // Declare parameters
-            pcd_file_path_ = declare_parameter<std::string>("pcd_file_path", "");
-            map_frame_ = declare_parameter<std::string>("map_frame", "map");
-            odom_frame_ = declare_parameter<std::string>("odom_frame", "odom");
+            pcd_file_path_ = util::getParam<std::string>(this, "pcd_file_path", "", "  pcd_file_path: ");
+            map_frame_ = util::getParam<std::string>(this, "map_frame", "map", "  map_frame: ");
+            odom_frame_ = util::getParam<std::string>(this, "odom_frame", "odom", "  odom_frame: ");
 
-            params_.solve_for_scale = declare_parameter<bool>("solve_for_scale", false);
-            params_.max_initial_guess_xy_deviation = declare_parameter<double>("max_initial_guess_xy_deviation", 2.0);
-            params_.max_scale_deviation = declare_parameter<double>("max_scale_deviation", 0.2);
-            params_.association_radius = declare_parameter<double>("association_radius", 1.0);
-            params_.min_correspondences = declare_parameter<int>("min_correspondences", 3);
-            params_.max_iterations = declare_parameter<int>("max_iterations", 20);
-            params_.convergence_threshold = declare_parameter<double>("convergence_threshold", 0.001);
-            params_.voxel_leaf_size = declare_parameter<double>("voxel_leaf_size", 0.0);
-            params_.initial_yaw_rad = declare_parameter<double>("initial_yaw_rad", 0.0);
-            params_.starting_point_x = declare_parameter<double>("starting_point_x", 0.0);
-            params_.starting_point_y = declare_parameter<double>("starting_point_y", 0.0);
-            params_.max_alignment_attempts = declare_parameter<int>("max_alignment_attempts", 3);
-            container_name_ = declare_parameter<std::string>("container_name", "autonomy_stack_container");
-
-            RCLCPP_INFO(get_logger(), " * Map Alignment parameters:");
-            RCLCPP_INFO(get_logger(), " *   solve_for_scale: %s", params_.solve_for_scale ? "true" : "false");
-            RCLCPP_INFO(get_logger(), " *   max_initial_guess_xy_deviation: %f", params_.max_initial_guess_xy_deviation);
-            RCLCPP_INFO(get_logger(), " *   max_scale_deviation: %f", params_.max_scale_deviation);
-            RCLCPP_INFO(get_logger(), " *   association_radius: %f", params_.association_radius);
-            RCLCPP_INFO(get_logger(), " *   min_correspondences: %d", params_.min_correspondences);
-            RCLCPP_INFO(get_logger(), " *   max_iterations: %d", params_.max_iterations);
-            RCLCPP_INFO(get_logger(), " *   convergence_threshold: %f", params_.convergence_threshold);
-            RCLCPP_INFO(get_logger(), " *   voxel_leaf_size: %f", params_.voxel_leaf_size);
-            RCLCPP_INFO(get_logger(), " *   initial_yaw_rad: %f", params_.initial_yaw_rad);
-            RCLCPP_INFO(get_logger(), " *   starting_point_x: %f", params_.starting_point_x);
-            RCLCPP_INFO(get_logger(), " *   starting_point_y: %f", params_.starting_point_y);
-            RCLCPP_INFO(get_logger(), " *   max_alignment_attempts: %d", params_.max_alignment_attempts);
-            RCLCPP_INFO(get_logger(), " *****************************************");
+            params_.solve_for_scale = util::getParam<bool>(this, "solve_for_scale", false, "  solve_for_scale: ");
+            params_.max_initial_guess_xy_deviation = util::getParam<double>(this, "max_initial_guess_xy_deviation", 2.0, "  max_initial_guess_xy_deviation: ");
+            params_.max_scale_deviation = util::getParam<double>(this, "max_scale_deviation", 0.2, "  max_scale_deviation: ");
+            params_.association_radius = util::getParam<double>(this, "association_radius", 1.0, "  association_radius: ");
+            params_.min_correspondences = util::getParam<int>(this, "min_correspondences", 3, "  min_correspondences: ");
+            params_.max_iterations = util::getParam<int>(this, "max_iterations", 20, "  max_iterations: ");
+            params_.convergence_threshold = util::getParam<double>(this, "convergence_threshold", 0.001, "  convergence_threshold: ");
+            params_.voxel_leaf_size = util::getParam<double>(this, "voxel_leaf_size", 0.0, "  voxel_leaf_size: ");
+            params_.initial_yaw_rad = util::getParam<double>(this, "initial_yaw_rad", 0.0, "  initial_yaw_rad: ");
+            params_.starting_point_x = util::getParam<double>(this, "starting_point_x", 0.0, "  starting_point_x: ");
+            params_.starting_point_y = util::getParam<double>(this, "starting_point_y", 0.0, "  starting_point_y: ");
+            params_.max_alignment_attempts = util::getParam<int>(this, "max_alignment_attempts", 3, "  max_alignment_attempts: ");
 
             // Initialize state
             map_landmarks_pcl_ = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
@@ -77,12 +60,6 @@ namespace uosm
             alignment_transform_pub_ = create_publisher<geometry_msgs::msg::TransformStamped>(
                 "alignment_transform", rclcpp::QoS(1));
 
-            // Service clients for container lifecycle management
-            list_nodes_client_ = create_client<composition_interfaces::srv::ListNodes>(
-                "/" + container_name_ + "/_container/list_nodes");
-            unload_node_client_ = create_client<composition_interfaces::srv::UnloadNode>(
-                "/" + container_name_ + "/_container/unload_node");
-            
             alignment_status_srv_ = create_service<std_srvs::srv::Trigger>(
                 "get_alignment_status",
                 std::bind(&MapAlignmentComponent::handleAlignmentStatusRequest, this,
@@ -252,15 +229,12 @@ namespace uosm
             if (alignment_attempt_count_ >= params_.max_alignment_attempts)
             {
                 RCLCPP_FATAL(get_logger(),
-                             "ALIGNMENT FAILED after %d attempts — killing component. "
+                             "ALIGNMENT FAILED after %d attempts. "
                              "Flight controller alignment timeout will trigger landing.",
                              alignment_attempt_count_);
-
-                // Full cleanup: cancel all timers, destroy subscription, unload from container
                 alignment_timer_->cancel();
                 status_pub_timer_->cancel();
                 landmark_sub_.reset();
-                unloadPerceptionComponents();
             }
         }
 
@@ -536,11 +510,7 @@ namespace uosm
             status_pub_timer_->cancel();
             landmark_sub_.reset();
 
-            // Publish visualization markers
             publishAlignmentVisualization(odom_points);
-
-            // Unload trunk segmentation from the container (no longer needed)
-            unloadPerceptionComponents();
         }
 
         void MapAlignmentComponent::publishTransform()
@@ -674,88 +644,6 @@ namespace uosm
                 response->message = "Alignment not yet complete. Observed landmarks: " +
                                     std::to_string(observed_landmarks_.size());
             }
-        }
-
-        void MapAlignmentComponent::unloadPerceptionComponents()
-        {
-            RCLCPP_INFO(get_logger(),
-                        "Scheduling perception component unload from '%s'...",
-                        container_name_.c_str());
-
-            // Deferred — let the current callback finish and final messages flush
-            cleanup_timer_ = create_wall_timer(
-                std::chrono::seconds(2),
-                std::bind(&MapAlignmentComponent::performUnload, this));
-        }
-
-        void MapAlignmentComponent::performUnload()
-        {
-            cleanup_timer_->cancel();
-
-            if (!list_nodes_client_->service_is_ready())
-            {
-                RCLCPP_WARN(get_logger(),
-                            "Container ListNodes service not ready — "
-                            "cannot unload components (container: '%s')",
-                            container_name_.c_str());
-                return;
-            }
-
-            auto request =
-                std::make_shared<composition_interfaces::srv::ListNodes::Request>();
-
-            list_nodes_client_->async_send_request(
-                request,
-                [this](rclcpp::Client<composition_interfaces::srv::ListNodes>::SharedFuture future)
-                {
-                    try
-                    {
-                        auto response = future.get();
-
-                        for (size_t i = 0; i < response->full_node_names.size(); ++i)
-                        {
-                            const auto &name = response->full_node_names[i];
-
-                            // Unload trunk_segmentation — the heavy LiDAR processing node
-                            if (name.find("trunk_segmentation") != std::string::npos)
-                            {
-                                RCLCPP_INFO(get_logger(),
-                                            "Unloading '%s' (uid=%lu) from container",
-                                            name.c_str(),
-                                            static_cast<unsigned long>(response->unique_ids[i]));
-
-                                auto unload_req =
-                                    std::make_shared<composition_interfaces::srv::UnloadNode::Request>();
-                                unload_req->unique_id = response->unique_ids[i];
-
-                                unload_node_client_->async_send_request(
-                                    unload_req,
-                                    [this, name](rclcpp::Client<composition_interfaces::srv::UnloadNode>::SharedFuture f)
-                                    {
-                                        try
-                                        {
-                                            auto resp = f.get();
-                                            if (resp->success)
-                                                RCLCPP_INFO(get_logger(), "Unloaded: %s", name.c_str());
-                                            else
-                                                RCLCPP_ERROR(get_logger(), "Failed to unload %s: %s",
-                                                             name.c_str(), resp->error_message.c_str());
-                                        }
-                                        catch (const std::exception &e)
-                                        {
-                                            RCLCPP_ERROR(get_logger(), "Unload call failed for %s: %s",
-                                                         name.c_str(), e.what());
-                                        }
-                                    });
-                                break;
-                            }
-                        }
-                    }
-                    catch (const std::exception &e)
-                    {
-                        RCLCPP_ERROR(get_logger(), "ListNodes call failed: %s", e.what());
-                    }
-                });
         }
 
     } // namespace perception

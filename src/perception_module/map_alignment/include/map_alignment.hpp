@@ -7,8 +7,6 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-#include <composition_interfaces/srv/list_nodes.hpp>
-#include <composition_interfaces/srv/unload_node.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -22,6 +20,7 @@
 #include <pcl/common/common.h>
 
 #include "uosm_uav_interface/msg/trunk_observation_array.hpp"
+#include "node_params.hpp"
 
 #include <atomic>
 #include <map>
@@ -53,7 +52,6 @@ namespace uosm::perception
     private:
         bool loadMap();
 
-        // Core functions
         void observationCallback(const uosm_uav_interface::msg::TrunkObservationArray::SharedPtr msg);
         void attemptAlignment();
         void prepareObservationData(
@@ -81,11 +79,6 @@ namespace uosm::perception
             const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
             std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
-        // Container lifecycle management
-        void unloadPerceptionComponents();
-        void performUnload();
-
-        // ROS interfaces
         rclcpp::Subscription<uosm_uav_interface::msg::TrunkObservationArray>::SharedPtr landmark_sub_;
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr alignment_marker_pub_;
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr alignment_status_pub_;
@@ -94,24 +87,15 @@ namespace uosm::perception
         rclcpp::TimerBase::SharedPtr alignment_timer_;
         rclcpp::TimerBase::SharedPtr status_pub_timer_;
 
-        // Container management
-        rclcpp::Client<composition_interfaces::srv::ListNodes>::SharedPtr list_nodes_client_;
-        rclcpp::Client<composition_interfaces::srv::UnloadNode>::SharedPtr unload_node_client_;
-        rclcpp::TimerBase::SharedPtr cleanup_timer_;
-        std::string container_name_;
-
-        // Parameters
         std::string map_frame_;
         std::string odom_frame_;
         std::string pcd_file_path_;
         MapAlignParameters params_;
 
-        // State
         std::atomic<bool> is_alignment_done_;
         int alignment_attempt_count_ = 0;
         std::map<uint16_t, uosm_uav_interface::msg::TrunkObservation> observed_landmarks_;
 
-        // Data
         pcl::PointCloud<pcl::PointXYZ>::Ptr map_landmarks_pcl_;
         pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr map_kdtree_;
         Eigen::Matrix4f T_map_odom_;

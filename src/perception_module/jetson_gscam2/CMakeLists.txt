@@ -20,6 +20,7 @@ find_package(cv_bridge REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(camera_info_manager REQUIRED)
 find_package(foxglove_msgs REQUIRED)
+find_package(uosm_uav_interface REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # Find GStreamer
@@ -53,6 +54,7 @@ ament_target_dependencies(csi_camera_component
   cv_bridge
   std_msgs
   camera_info_manager
+  uosm_uav_interface
   OpenCV
 )
 
