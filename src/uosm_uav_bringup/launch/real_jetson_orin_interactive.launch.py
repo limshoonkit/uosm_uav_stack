@@ -18,6 +18,15 @@ def generate_launch_description():
 
     # LaunchConfiguration
     use_foxglove = LaunchConfiguration('use_foxglove')
+    use_landmark_fusion = LaunchConfiguration('use_landmark_fusion')
+
+    # Launch argument for landmark fusion in odom_republisher
+    use_landmark_fusion_arg = DeclareLaunchArgument(
+        'use_landmark_fusion',
+        default_value='false',
+        description='Whether to enable iSAM2 landmark fusion in odom_republisher',
+        choices=['true', 'false']
+    )
 
     # Declare launch argument to enable foxglove
     use_foxglove_arg = DeclareLaunchArgument(
@@ -113,6 +122,7 @@ def generate_launch_description():
             'base_frame': 'base_link',
             'camera_frame': 'zedm_camera_link',
             'broadcast_tf': True,
+            'use_landmark_fusion': use_landmark_fusion,
         }],
         remappings=[
             ('/vio/odom', '/zed_node/odom'),
@@ -249,6 +259,7 @@ def generate_launch_description():
 
         # Launch arguments
         use_foxglove_arg,
+        use_landmark_fusion_arg,
 
         # Nodes
         autonomy_stack_container,

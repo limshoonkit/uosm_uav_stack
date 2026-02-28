@@ -20,6 +20,7 @@ def generate_launch_description():
     use_rosbag = LaunchConfiguration('use_rosbag')
     bag_output_path = LaunchConfiguration('bag_output_path')
     rosbag_delay = LaunchConfiguration('rosbag_delay')
+    use_landmark_fusion = LaunchConfiguration('use_landmark_fusion')
 
     # Declare launch argument to enable ROS2 bag recording
     use_rosbag_arg = DeclareLaunchArgument(
@@ -51,6 +52,14 @@ def generate_launch_description():
         choices=['true', 'false']
     )
 
+    # Launch argument for landmark fusion in odom_republisher
+    use_landmark_fusion_arg = DeclareLaunchArgument(
+        'use_landmark_fusion',
+        default_value='false',
+        description='Whether to enable iSAM2 landmark fusion in odom_republisher',
+        choices=['true', 'false']
+    )
+
     # Launch argument for map alignment integration
     wait_for_alignment_arg = DeclareLaunchArgument(
         'wait_for_alignment',
@@ -77,8 +86,6 @@ def generate_launch_description():
 
     waypoint_dir = get_package_share_directory('map_processor')
     waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'single_id_26.csv')
-    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'triple_id_23_26_51.csv')
-    # waypoint_config = os.path.join(waypoint_dir, 'maps', 'klk', 'penta_id_20_23_26_51_52.csv')
 
     mcap_options = os.path.join(bringup_package, 'config', 'mcap_writer_options.yaml')
     qos_overrides = os.path.join(bringup_package, 'config', 'qos_overrides.yaml')
@@ -201,6 +208,7 @@ def generate_launch_description():
             'base_frame': 'base_link',
             'camera_frame': 'zedm_camera_link',
             'broadcast_tf': True,
+            'use_landmark_fusion': use_landmark_fusion,
         }],
         remappings=[
             ('/vio/odom', '/zed_node/odom'),
@@ -389,6 +397,7 @@ def generate_launch_description():
         rosbag_delay_arg,
         use_foxglove_arg,
         wait_for_alignment_arg,
+        use_landmark_fusion_arg,
 
         # Nodes
         autonomy_stack_container,

@@ -18,6 +18,7 @@ def generate_launch_description():
     rosbag_delay = LaunchConfiguration('rosbag_delay')
     use_foxglove = LaunchConfiguration('use_foxglove')
     use_gridmap = LaunchConfiguration('use_gridmap')
+    use_landmark_fusion = LaunchConfiguration('use_landmark_fusion')
 
     # Declare launch argument to enable ROS2 bag recording
     use_rosbag_arg = DeclareLaunchArgument(
@@ -53,6 +54,13 @@ def generate_launch_description():
         'use_gridmap',
         default_value='true',
         description='Whether to run grid map only (EgoPlanner with empty waypoints, no path planning)',
+        choices=['true', 'false']
+    )
+
+    use_landmark_fusion_arg = DeclareLaunchArgument(
+        'use_landmark_fusion',
+        default_value='false',
+        description='Whether to enable iSAM2 landmark fusion in odom_republisher',
         choices=['true', 'false']
     )
 
@@ -113,6 +121,7 @@ def generate_launch_description():
             'base_frame': 'base_link',
             'camera_frame': 'zedm_camera_link',
             'broadcast_tf': True,
+            'use_landmark_fusion': use_landmark_fusion,
         }],
         remappings=[
             ('/vio/odom', '/zed_node/odom'),
@@ -337,6 +346,7 @@ def generate_launch_description():
         rosbag_delay_arg,
         use_foxglove_arg,
         use_gridmap_arg,
+        use_landmark_fusion_arg,
 
         # Nodes
         autonomy_stack_container,
