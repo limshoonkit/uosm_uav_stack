@@ -28,6 +28,7 @@
 #include "uosm_uav_interface/msg/trunk_observation_array.hpp"
 #include "node_params.hpp"
 
+#include <array>
 #include <mutex>
 #include <set>
 #include <vector>
@@ -61,6 +62,7 @@ namespace uosm
       void handle_alignment_done(const std_msgs::msg::Bool::SharedPtr &msg);
       void handle_alignment_transform(
           const geometry_msgs::msg::TransformStamped::SharedPtr &msg);
+      void try_arm_isam2();
       void process_keyframe(
           const gtsam::Pose2 &vio_pose2d,
           const nav_msgs::msg::Odometry &vio_base);
@@ -89,6 +91,7 @@ namespace uosm
       rclcpp::Subscription<geometry_msgs::msg::TransformStamped>::SharedPtr
           alignment_transform_sub_;
       bool alignment_transform_received_{false};
+      bool alignment_done_flag_{false};
       bool alignment_done_received_{false};
 
       rclcpp::Subscription<uosm_uav_interface::msg::TrunkObservationArray>::SharedPtr
@@ -105,14 +108,12 @@ namespace uosm
       int keyframe_idx_{0};
       gtsam::Pose2 last_keyframe_vio_pose2d_;
       gtsam::Pose2 last_corrected_pose2d_;
+      std::array<double, 36> last_vio_cov_{};
 
       std::set<uint64_t> known_landmarks_;
 
       double keyframe_dist_threshold_{0.3};
       double keyframe_yaw_threshold_{0.087};
-      double vio_xy_noise_{0.05};
-      double vio_yaw_noise_{0.02};
-      double landmark_obs_noise_{0.15};
       double prior_xy_noise_{0.1};
       double prior_yaw_noise_{0.05};
       double isam2_relinearize_threshold_{0.1};

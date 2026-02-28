@@ -10,9 +10,6 @@ odom_republisher_node:
     keyframe_dist_threshold: 0.3
     keyframe_yaw_threshold: 0.087
 
-    vio_xy_noise: 0.05
-    vio_yaw_noise: 0.02
-    landmark_obs_noise: 0.15
     prior_xy_noise: 0.1
     prior_yaw_noise: 0.05
 

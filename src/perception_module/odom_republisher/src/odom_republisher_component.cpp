@@ -18,9 +18,6 @@ namespace uosm
       use_landmark_fusion_ = util::getParam<bool>(this, "use_landmark_fusion", false, "  use_landmark_fusion: ");
       keyframe_dist_threshold_ = util::getParam<double>(this, "keyframe_dist_threshold", 0.3, "  keyframe_dist_threshold: ");
       keyframe_yaw_threshold_ = util::getParam<double>(this, "keyframe_yaw_threshold", 0.087, "  keyframe_yaw_threshold: ");
-      vio_xy_noise_ = util::getParam<double>(this, "vio_xy_noise", 0.05, "  vio_xy_noise: ");
-      vio_yaw_noise_ = util::getParam<double>(this, "vio_yaw_noise", 0.02, "  vio_yaw_noise: ");
-      landmark_obs_noise_ = util::getParam<double>(this, "landmark_obs_noise", 0.15, "  landmark_obs_noise: ");
       prior_xy_noise_ = util::getParam<double>(this, "prior_xy_noise", 0.1, "  prior_xy_noise: ");
       prior_yaw_noise_ = util::getParam<double>(this, "prior_yaw_noise", 0.05, "  prior_yaw_noise: ");
       isam2_relinearize_threshold_ = util::getParam<double>(this, "isam2_relinearize_threshold", 0.1, "  isam2_relinearize_threshold: ");
@@ -58,12 +55,12 @@ namespace uosm
             });
 
         alignment_done_sub_ = create_subscription<std_msgs::msg::Bool>(
-            "alignment_done", rclcpp::QoS(1).reliable().transient_local(),
+            "alignment_done", rclcpp::QoS(1),
             [this](const std_msgs::msg::Bool::SharedPtr msg)
             { handle_alignment_done(msg); });
 
         alignment_transform_sub_ = create_subscription<geometry_msgs::msg::TransformStamped>(
-            "alignment_transform", rclcpp::QoS(1).reliable().transient_local(),
+            "alignment_transform", rclcpp::QoS(1),
             [this](const geometry_msgs::msg::TransformStamped::SharedPtr msg)
             {
               handle_alignment_transform(msg);
@@ -179,6 +176,14 @@ namespace uosm
       tf_broadcaster_->sendTransform(tf);
     }
 
+    void OdomRepublisher::try_arm_isam2()
+    {
+      if (alignment_done_received_) return;
+      if (!alignment_done_flag_ || !alignment_transform_received_) return;
+      alignment_done_received_ = true;
+      RCLCPP_INFO(get_logger(), "Alignment complete — iSAM2 landmark fusion armed");
+    }
+
     void OdomRepublisher::handle_alignment_transform(
         const geometry_msgs::msg::TransformStamped::SharedPtr &msg)
     {
@@ -187,20 +192,15 @@ namespace uosm
       alignment_transform_received_ = true;
       RCLCPP_INFO(get_logger(), "Received alignment transform (map->odom)");
       (void)msg;
+      try_arm_isam2();
     }
 
     void OdomRepublisher::handle_alignment_done(const std_msgs::msg::Bool::SharedPtr &msg)
     {
       if (!msg->data || alignment_done_received_)
         return;
-      if (!alignment_transform_received_)
-      {
-        RCLCPP_WARN(get_logger(),
-                    "alignment_done received but alignment_transform not yet — will retry");
-        return;
-      }
-      alignment_done_received_ = true;
-      RCLCPP_INFO(get_logger(), "Alignment complete — iSAM2 landmark fusion armed");
+      alignment_done_flag_ = true;
+      try_arm_isam2();
     }
 
     void OdomRepublisher::handle_trunk_callback(
@@ -284,12 +284,18 @@ namespace uosm
     {
       using gtsam::Symbol;
 
+      const auto &cov = vio_base.pose.covariance;
+
       if (!isam_initialized_)
       {
+        double sx = std::max(std::sqrt(cov[0]), prior_xy_noise_);
+        double sy = std::max(std::sqrt(cov[7]), prior_xy_noise_);
+        double syaw = std::max(std::sqrt(cov[35]), prior_yaw_noise_);
         auto prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
-            (gtsam::Vector(3) << prior_xy_noise_, prior_xy_noise_, prior_yaw_noise_).finished());
+            (gtsam::Vector(3) << sx, sy, syaw).finished());
         new_factors_.addPrior(Symbol('x', 0), vio_pose2d, prior_noise);
         new_values_.insert(Symbol('x', 0), vio_pose2d);
+        last_vio_cov_ = cov;
         isam_initialized_ = true;
         RCLCPP_INFO(get_logger(), "iSAM2 initialized at (%.2f, %.2f, %.2f)",
                     vio_pose2d.x(), vio_pose2d.y(), vio_pose2d.theta());
@@ -297,11 +303,17 @@ namespace uosm
       else
       {
         gtsam::Pose2 delta = last_keyframe_vio_pose2d_.between(vio_pose2d);
+        constexpr double kMinBetweenXY = 0.01;
+        constexpr double kMinBetweenYaw = 0.005;
+        double dx_sigma = std::max(std::sqrt(std::abs(cov[0] - last_vio_cov_[0])), kMinBetweenXY);
+        double dy_sigma = std::max(std::sqrt(std::abs(cov[7] - last_vio_cov_[7])), kMinBetweenXY);
+        double dyaw_sigma = std::max(std::sqrt(std::abs(cov[35] - last_vio_cov_[35])), kMinBetweenYaw);
         auto vio_noise = gtsam::noiseModel::Diagonal::Sigmas(
-            (gtsam::Vector(3) << vio_xy_noise_, vio_xy_noise_, vio_yaw_noise_).finished());
+            (gtsam::Vector(3) << dx_sigma, dy_sigma, dyaw_sigma).finished());
         new_factors_.add(gtsam::BetweenFactor<gtsam::Pose2>(
             Symbol('x', keyframe_idx_ - 1), Symbol('x', keyframe_idx_), delta, vio_noise));
         new_values_.insert(Symbol('x', keyframe_idx_), vio_pose2d);
+        last_vio_cov_ = cov;
       }
 
       {
@@ -320,8 +332,26 @@ namespace uosm
           if (range < 0.5 || range > 20.0)
             continue;
 
-          double bearing_sigma = landmark_obs_noise_ / std::max(range, 1.0);
-          double range_sigma = landmark_obs_noise_;
+          Eigen::Matrix2d C_odom;
+          C_odom << obs.covariance[0], obs.covariance[1],
+                    obs.covariance[2], obs.covariance[3];
+
+          Eigen::Matrix2d R_body;
+          R_body << cos_yaw, sin_yaw,
+                   -sin_yaw, cos_yaw;
+          Eigen::Matrix2d C_body = R_body * C_odom * R_body.transpose();
+
+          double r2 = range * range;
+          Eigen::Matrix2d J_br;
+          J_br << -body_dy / r2, body_dx / r2,
+                   body_dx / range, body_dy / range;
+          Eigen::Matrix2d C_br = J_br * C_body * J_br.transpose();
+
+          constexpr double kMinBearingSigma = 0.01;
+          constexpr double kMinRangeSigma = 0.05;
+          double bearing_sigma = std::max(std::sqrt(std::abs(C_br(0, 0))), kMinBearingSigma);
+          double range_sigma = std::max(std::sqrt(std::abs(C_br(1, 1))), kMinRangeSigma);
+
           auto obs_noise = gtsam::noiseModel::Diagonal::Sigmas(
               (gtsam::Vector(2) << bearing_sigma, range_sigma).finished());
 

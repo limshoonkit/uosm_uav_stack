@@ -40,15 +40,12 @@ def _launch_setup(context, *args, **kwargs):
     resolved_bag_path = os.path.expanduser(
         LaunchConfiguration('bag_path').perform(context))
 
-    vio_xy_noise = float(LaunchConfiguration('vio_xy_noise').perform(context))
-    vio_yaw_noise = float(LaunchConfiguration('vio_yaw_noise').perform(context))
-    landmark_obs_noise = float(
-        LaunchConfiguration('landmark_obs_noise').perform(context))
     keyframe_dist = float(
         LaunchConfiguration('keyframe_dist_threshold').perform(context))
     keyframe_yaw = float(
         LaunchConfiguration('keyframe_yaw_threshold').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
+    
 
     # ── package paths ──────────────────────────────────────────────────
     trunk_seg_dir = get_package_share_directory('trunk_segmentation')
@@ -68,6 +65,9 @@ def _launch_setup(context, *args, **kwargs):
     robot_viewer_dir = get_package_share_directory('uosm_robot_viewer')
     urdf_xacro_path = os.path.join(
         robot_viewer_dir, 'urdf', 'uosm_uav_platform.urdf.xacro')
+
+    bringup_dir = get_package_share_directory('uosm_uav_bringup')
+    rviz_config = os.path.join(bringup_dir, 'config', 'rviz', 'landmark_fusion_bag_test.rviz')
 
     # ── composable nodes ───────────────────────────────────────────────
     trunk_seg = ComposableNode(
@@ -115,9 +115,6 @@ def _launch_setup(context, *args, **kwargs):
                 'use_sim_time': True,
                 'camera_frame': 'base_link',
                 'use_landmark_fusion': True,
-                'vio_xy_noise': vio_xy_noise,
-                'vio_yaw_noise': vio_yaw_noise,
-                'landmark_obs_noise': landmark_obs_noise,
                 'keyframe_dist_threshold': keyframe_dist,
                 'keyframe_yaw_threshold': keyframe_yaw,
             },
@@ -227,6 +224,7 @@ def _launch_setup(context, *args, **kwargs):
         executable='rviz2',
         name='rviz2',
         output='screen',
+        arguments=['-d', rviz_config],
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('use_rviz')),
     )
@@ -273,19 +271,7 @@ def generate_launch_description():
             description='Log level (debug to see per-keyframe iSAM2 output)',
         ),
 
-        # ── iSAM2 noise tuning (override from CLI) ────────────────────
-        DeclareLaunchArgument(
-            'vio_xy_noise', default_value='0.05',
-            description='VIO between-factor xy sigma (m)',
-        ),
-        DeclareLaunchArgument(
-            'vio_yaw_noise', default_value='0.02',
-            description='VIO between-factor yaw sigma (rad)',
-        ),
-        DeclareLaunchArgument(
-            'landmark_obs_noise', default_value='0.15',
-            description='Landmark bearing/range observation sigma (m)',
-        ),
+        # ── iSAM2 tuning (override from CLI) ──────────────────────────
         DeclareLaunchArgument(
             'keyframe_dist_threshold', default_value='0.3',
             description='Keyframe distance threshold (m)',
