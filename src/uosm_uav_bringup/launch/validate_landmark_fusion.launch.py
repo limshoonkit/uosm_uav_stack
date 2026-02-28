@@ -189,12 +189,24 @@ def _launch_setup(context, *args, **kwargs):
         condition=UnlessCondition(use_rviz),
     )
 
+    # ── static map → odom TF ─────────────────────────────────────────
+    static_map_to_odom = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='map_to_odom_tf',
+        arguments=[
+            '--x', '0.0', '--y', '0.0', '--z', '0.0',
+            '--roll', '0.0', '--pitch', '0.0', '--yaw', '0.0',
+            '--frame-id', 'map', '--child-frame-id', 'odom',
+        ],
+        output='screen',
+    )
+
     # ── bag playback ───────────────────────────────────────────────────
     bag_play = ExecuteProcess(
         condition=IfCondition(LaunchConfiguration('use_bag_player')),
         cmd=[
             'ros2', 'bag', 'play', resolved_bag_path, '--clock',
-            '--exclude', '/mavros/odometry/out',
         ],
         output='screen',
     )
@@ -204,6 +216,7 @@ def _launch_setup(context, *args, **kwargs):
         map_processor_node,
         odom_visualization_node,
         odom_to_tf_node,
+        static_map_to_odom,
         jsp_node,
         rviz_node,
         foxglove_bridge_node,
