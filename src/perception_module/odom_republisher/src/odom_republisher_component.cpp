@@ -16,13 +16,8 @@ namespace uosm
       broadcast_tf_ = util::getParam<bool>(this, "broadcast_tf", true, "  broadcast_tf: ");
 
       use_landmark_fusion_ = util::getParam<bool>(this, "use_landmark_fusion", false, "  use_landmark_fusion: ");
-      keyframe_dist_threshold_ = util::getParam<double>(this, "keyframe_dist_threshold", 0.3, "  keyframe_dist_threshold: ");
-      keyframe_yaw_threshold_ = util::getParam<double>(this, "keyframe_yaw_threshold", 0.087, "  keyframe_yaw_threshold: ");
-      prior_xy_noise_ = util::getParam<double>(this, "prior_xy_noise", 0.1, "  prior_xy_noise: ");
-      prior_yaw_noise_ = util::getParam<double>(this, "prior_yaw_noise", 0.05, "  prior_yaw_noise: ");
-      isam2_relinearize_threshold_ = util::getParam<double>(this, "isam2_relinearize_threshold", 0.1, "  isam2_relinearize_threshold: ");
-      isam2_relinearize_skip_ = util::getParam<int>(this, "isam2_relinearize_skip", 10, "  isam2_relinearize_skip: ");
-
+      keyframe_dist_threshold_ = util::getParam<double>(this, "keyframe_dist_threshold", 0.15, "  keyframe_dist_threshold: ");
+      keyframe_yaw_threshold_ = util::getParam<double>(this, "keyframe_yaw_threshold", 0.05, "  keyframe_yaw_threshold: ");
       tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
       tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -67,8 +62,8 @@ namespace uosm
             });
 
         gtsam::ISAM2Params params;
-        params.relinearizeThreshold = isam2_relinearize_threshold_;
-        params.relinearizeSkip = isam2_relinearize_skip_;
+        params.relinearizeThreshold = 0.1;
+        params.relinearizeSkip = 10;
         isam_ = std::make_unique<gtsam::ISAM2>(params);
       }
     }
@@ -178,8 +173,10 @@ namespace uosm
 
     void OdomRepublisher::try_arm_isam2()
     {
-      if (alignment_done_received_) return;
-      if (!alignment_done_flag_ || !alignment_transform_received_) return;
+      if (alignment_done_received_)
+        return;
+      if (!alignment_done_flag_ || !alignment_transform_received_)
+        return;
       alignment_done_received_ = true;
       RCLCPP_INFO(get_logger(), "Alignment complete — iSAM2 landmark fusion armed");
     }
@@ -288,9 +285,11 @@ namespace uosm
 
       if (!isam_initialized_)
       {
-        double sx = std::max(std::sqrt(cov[0]), prior_xy_noise_);
-        double sy = std::max(std::sqrt(cov[7]), prior_xy_noise_);
-        double syaw = std::max(std::sqrt(cov[35]), prior_yaw_noise_);
+        constexpr double kMinPriorXY = 0.1;
+        constexpr double kMinPriorYaw = 0.05;
+        double sx = std::max(std::sqrt(cov[0]), kMinPriorXY);
+        double sy = std::max(std::sqrt(cov[7]), kMinPriorXY);
+        double syaw = std::max(std::sqrt(cov[35]), kMinPriorYaw);
         auto prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
             (gtsam::Vector(3) << sx, sy, syaw).finished());
         new_factors_.addPrior(Symbol('x', 0), vio_pose2d, prior_noise);
@@ -334,17 +333,17 @@ namespace uosm
 
           Eigen::Matrix2d C_odom;
           C_odom << obs.covariance[0], obs.covariance[1],
-                    obs.covariance[2], obs.covariance[3];
+              obs.covariance[2], obs.covariance[3];
 
           Eigen::Matrix2d R_body;
           R_body << cos_yaw, sin_yaw,
-                   -sin_yaw, cos_yaw;
+              -sin_yaw, cos_yaw;
           Eigen::Matrix2d C_body = R_body * C_odom * R_body.transpose();
 
           double r2 = range * range;
           Eigen::Matrix2d J_br;
           J_br << -body_dy / r2, body_dx / r2,
-                   body_dx / range, body_dy / range;
+              body_dx / range, body_dy / range;
           Eigen::Matrix2d C_br = J_br * C_body * J_br.transpose();
 
           constexpr double kMinBearingSigma = 0.01;

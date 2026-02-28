@@ -236,6 +236,34 @@ def _launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
+    # ── optional bag recording of fusion results ──────────────────────
+    record_path = LaunchConfiguration('record_path').perform(context)
+    record_bag = ExecuteProcess(
+        condition=IfCondition(LaunchConfiguration('record')),
+        cmd=[
+            'ros2', 'bag', 'record',
+            '/odom/corrected',
+            '/scan',
+            '/zed_node/point_cloud/cloud_registered',
+            '/zed_node/left/color/rect/image',
+            '/zed_node/left/color/rect/image/camera_info',
+            '/zed_node/right/color/rect/image',
+            '/zed_node/right/color/rect/image/camera_info',
+            '/csi_cam/image_raw',
+            '/csi_cam/image_raw/compressed',
+            '/csi_cam/camera_info',
+            '/mavros/imu/data',
+            '/mavros/hps167_pub',
+            '/grid_map/occupancy_inflate',
+            '/diagnostics',
+            '/tf', '/tf_static',
+            '--use-sim-time',
+            '-s', 'mcap',
+            '-o', record_path,
+        ],
+        output='screen',
+    )
+
     return [
         container,
         raw_viz,
@@ -244,6 +272,7 @@ def _launch_setup(context, *args, **kwargs):
         jsp,
         rviz,
         bag_play,
+        record_bag,
     ]
 
 
@@ -271,14 +300,24 @@ def generate_launch_description():
             description='Log level (debug to see per-keyframe iSAM2 output)',
         ),
 
+        # ── recording ──────────────────────────────────────────────────
+        DeclareLaunchArgument(
+            'record', default_value='false',
+            description='Record fusion results to a bag',
+        ),
+        DeclareLaunchArgument(
+            'record_path', default_value='./bags/real/klk/test_manual_1_corrected',
+            description='Output path for the recorded bag',
+        ),
+
         # ── iSAM2 tuning (override from CLI) ──────────────────────────
         DeclareLaunchArgument(
-            'keyframe_dist_threshold', default_value='0.3',
+            'keyframe_dist_threshold', default_value='0.15',
             description='Keyframe distance threshold (m)',
         ),
         DeclareLaunchArgument(
-            'keyframe_yaw_threshold', default_value='0.087',
-            description='Keyframe yaw threshold (rad, ~5 deg)',
+            'keyframe_yaw_threshold', default_value='0.05',
+            description='Keyframe yaw threshold (rad, ~3 deg)',
         ),
 
         OpaqueFunction(function=_launch_setup),

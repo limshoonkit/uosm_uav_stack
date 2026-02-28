@@ -7,11 +7,6 @@ odom_republisher_node:
 
     use_landmark_fusion: false
 
-    keyframe_dist_threshold: 0.3
-    keyframe_yaw_threshold: 0.087
+    keyframe_dist_threshold: 0.15
+    keyframe_yaw_threshold: 0.05
 
-    prior_xy_noise: 0.1
-    prior_yaw_noise: 0.05
-
-    isam2_relinearize_threshold: 0.1
-    isam2_relinearize_skip: 10

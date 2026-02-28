@@ -112,12 +112,8 @@ namespace uosm
 
       std::set<uint64_t> known_landmarks_;
 
-      double keyframe_dist_threshold_{0.3};
-      double keyframe_yaw_threshold_{0.087};
-      double prior_xy_noise_{0.1};
-      double prior_yaw_noise_{0.05};
-      double isam2_relinearize_threshold_{0.1};
-      int isam2_relinearize_skip_{10};
+      double keyframe_dist_threshold_{0.15};
+      double keyframe_yaw_threshold_{0.05};
     };
 
   } // namespace perception
