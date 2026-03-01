@@ -85,8 +85,8 @@ Visualization Manager:
         - Alpha: 0.5
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 4.950000286102295
-            Min Value: 2.6500000953674316
+            Max Value: 4.650000095367432
+            Min Value: -0.05000000074505806
             Value: true
           Axis: Z
           Channel Name: intensity
@@ -527,6 +527,20 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /active_tracks
           Value: true
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: true
+          Name: MarkerArray
+          Namespaces:
+            lost_covariance: true
+            lost_labels: true
+            lost_trunks: true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /lost_tracks
+          Value: true
       Enabled: true
       Name: MapAlignment
     - Class: rviz_common/Group
@@ -646,25 +660,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 24.041202545166016
+      Distance: 31.872270584106445
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.672477722167969
-        Y: -1.1958931684494019
-        Z: 8.44846248626709
+        X: -5.229985237121582
+        Y: -0.5877270698547363
+        Z: 2.8544130325317383
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8997968435287476
+      Pitch: 0.7947964668273926
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.202190399169922
+      Yaw: 4.182191371917725
     Saved: ~
 Window Geometry:
   Displays:

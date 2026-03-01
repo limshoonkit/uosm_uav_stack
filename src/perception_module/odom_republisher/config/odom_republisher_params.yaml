@@ -6,7 +6,11 @@ odom_republisher_node:
     broadcast_tf: true
 
     use_landmark_fusion: false
+    enable_diagnostics: true
 
     keyframe_dist_threshold: 0.15
     keyframe_yaw_threshold: 0.05
 
+    sparse_landmark_threshold: 3
+    sparse_landmark_exit_threshold: 5
+    sparse_keyframe_scale: 0.3

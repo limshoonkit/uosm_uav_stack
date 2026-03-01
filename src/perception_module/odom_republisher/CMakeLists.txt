@@ -34,6 +34,7 @@ ament_target_dependencies(odom_republisher_component
     geometry_msgs
     tf2
     tf2_ros
+    diagnostic_updater
     uosm_uav_interface
 )
 
@@ -72,6 +73,7 @@ ament_export_dependencies(
   rclcpp_components
   tf2
   tf2_ros
+  diagnostic_updater
 )
 
 ament_package()

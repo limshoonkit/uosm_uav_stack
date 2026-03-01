@@ -47,6 +47,10 @@ namespace uosm
       {
         RCLCPP_INFO(get_logger(), "iSAM2 landmark fusion enabled — waiting for alignment");
 
+        sparse_landmark_threshold_ = util::getParam<int>(this, "sparse_landmark_threshold", 2, "  sparse_landmark_threshold: ");
+        sparse_landmark_exit_threshold_ = util::getParam<int>(this, "sparse_landmark_exit_threshold", 4, "  sparse_landmark_exit_threshold: ");
+        sparse_keyframe_scale_ = util::getParam<double>(this, "sparse_keyframe_scale", 0.5, "  sparse_keyframe_scale: ");
+
         trunk_sub_ = create_subscription<uosm_uav_interface::msg::TrunkObservationArray>(
             "trunk_observations", 10,
             [this](const uosm_uav_interface::msg::TrunkObservationArray::SharedPtr msg)
@@ -70,6 +74,15 @@ namespace uosm
         params.relinearizeThreshold = 0.1;
         params.relinearizeSkip = 10;
         isam_ = std::make_unique<gtsam::ISAM2>(params);
+
+        enable_diagnostics_ = util::getParam<bool>(this, "enable_diagnostics", false, "  enable_diagnostics: ");
+        if (enable_diagnostics_)
+        {
+          diag_updater_ = std::make_unique<diagnostic_updater::Updater>(this);
+          diag_updater_->setHardwareID("iSAM2_LandmarkFusion");
+          diag_updater_->add("Landmark Fusion Sparsity",
+                             std::bind(&OdomRepublisher::update_fusion_diagnostics, this, std::placeholders::_1));
+        }
       }
     }
 
@@ -187,19 +200,18 @@ namespace uosm
     }
 
     void OdomRepublisher::handle_alignment_transform(
-        const geometry_msgs::msg::TransformStamped::SharedPtr &msg)
+        const geometry_msgs::msg::TransformStamped::SharedPtr & /*msg*/)
     {
       if (alignment_transform_received_)
         return;
       alignment_transform_received_ = true;
       RCLCPP_INFO(get_logger(), "Received alignment transform (map->odom)");
-      (void)msg;
       try_arm_isam2();
     }
 
     void OdomRepublisher::handle_alignment_done(const std_msgs::msg::Bool::SharedPtr &msg)
     {
-      if (!msg->data || alignment_done_received_)
+      if (!msg->data)
         return;
       alignment_done_flag_ = true;
       try_arm_isam2();
@@ -251,6 +263,19 @@ namespace uosm
       gtsam::Pose2 current_vio_pose2d(
           vio_base.pose.pose.position.x, vio_base.pose.pose.position.y, yaw);
 
+      if (!sparse_mode_active_ && !known_landmarks_.empty() && last_keyframe_landmark_count_ <= sparse_landmark_threshold_)
+        sparse_mode_active_ = true;
+      else if (sparse_mode_active_ && last_keyframe_landmark_count_ >= sparse_landmark_exit_threshold_)
+        sparse_mode_active_ = false;
+
+      double eff_dist_thresh = keyframe_dist_threshold_;
+      double eff_yaw_thresh = keyframe_yaw_threshold_;
+      if (sparse_mode_active_)
+      {
+        eff_dist_thresh *= sparse_keyframe_scale_;
+        eff_yaw_thresh *= sparse_keyframe_scale_;
+      }
+
       bool is_keyframe = false;
       if (!isam_initialized_)
       {
@@ -261,12 +286,12 @@ namespace uosm
         gtsam::Pose2 delta = last_keyframe_vio_pose2d_.between(current_vio_pose2d);
         double dist = std::hypot(delta.x(), delta.y());
         double dyaw = std::abs(delta.theta());
-        is_keyframe = (dist > keyframe_dist_threshold_ || dyaw > keyframe_yaw_threshold_);
+        is_keyframe = (dist > eff_dist_thresh || dyaw > eff_yaw_thresh);
       }
 
       if (is_keyframe)
       {
-        process_keyframe(current_vio_pose2d, vio_base);
+        process_keyframe(current_vio_pose2d, vio_base, roll, pitch);
       }
       else
       {
@@ -274,7 +299,7 @@ namespace uosm
             last_corrected_pose2d_.compose(last_keyframe_vio_pose2d_.inverse());
         gtsam::Pose2 corrected_current = correction.compose(current_vio_pose2d);
         nav_msgs::msg::Odometry corrected_odom =
-            build_corrected_odom(corrected_current, vio_base);
+            build_corrected_odom(corrected_current, vio_base, roll, pitch);
         broadcast_odom_tf(corrected_odom);
         odom_pub_->publish(corrected_odom);
       }
@@ -282,9 +307,13 @@ namespace uosm
 
     void OdomRepublisher::process_keyframe(
         const gtsam::Pose2 &vio_pose2d,
-        const nav_msgs::msg::Odometry &vio_base)
+        const nav_msgs::msg::Odometry &vio_base,
+        double vio_roll, double vio_pitch)
     {
       using gtsam::Symbol;
+
+      gtsam::NonlinearFactorGraph new_factors;
+      gtsam::Values new_values;
 
       const auto &cov = vio_base.pose.covariance;
 
@@ -297,8 +326,8 @@ namespace uosm
         double syaw = std::max(std::sqrt(cov[35]), kMinPriorYaw);
         auto prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
             (gtsam::Vector(3) << sx, sy, syaw).finished());
-        new_factors_.addPrior(Symbol('x', 0), vio_pose2d, prior_noise);
-        new_values_.insert(Symbol('x', 0), vio_pose2d);
+        new_factors.addPrior(Symbol('x', 0), vio_pose2d, prior_noise);
+        new_values.insert(Symbol('x', 0), vio_pose2d);
         last_vio_cov_ = cov;
         isam_initialized_ = true;
         RCLCPP_INFO(get_logger(), "iSAM2 initialized at (%.2f, %.2f, %.2f)",
@@ -314,110 +343,171 @@ namespace uosm
         double dyaw_sigma = std::max(std::sqrt(std::abs(cov[35] - last_vio_cov_[35])), kMinBetweenYaw);
         auto vio_noise = gtsam::noiseModel::Diagonal::Sigmas(
             (gtsam::Vector(3) << dx_sigma, dy_sigma, dyaw_sigma).finished());
-        new_factors_.add(gtsam::BetweenFactor<gtsam::Pose2>(
+        new_factors.add(gtsam::BetweenFactor<gtsam::Pose2>(
             Symbol('x', keyframe_idx_ - 1), Symbol('x', keyframe_idx_), delta, vio_noise));
-        new_values_.insert(Symbol('x', keyframe_idx_), vio_pose2d);
+        new_values.insert(Symbol('x', keyframe_idx_), vio_pose2d);
         last_vio_cov_ = cov;
       }
 
+      int available_landmark_count = 0;
+      int landmark_factors_added = 0;
       {
         std::lock_guard<std::mutex> lock(obs_mutex_);
+
+        std::unordered_map<uint64_t, const uosm_uav_interface::msg::TrunkObservation *> latest_per_landmark;
         for (const auto &obs : pending_observations_)
         {
-          double dx_odom = obs.position.x - vio_pose2d.x();
-          double dy_odom = obs.position.y - vio_pose2d.y();
+          latest_per_landmark[obs.landmark_id] = &obs;
+        }
+        available_landmark_count = static_cast<int>(latest_per_landmark.size());
+
+        if (!sparse_mode_active_)
+        {
           double cos_yaw = std::cos(vio_pose2d.theta());
           double sin_yaw = std::sin(vio_pose2d.theta());
-          double body_dx = cos_yaw * dx_odom + sin_yaw * dy_odom;
-          double body_dy = -sin_yaw * dx_odom + cos_yaw * dy_odom;
-          double range = std::hypot(body_dx, body_dy);
-          double bearing = std::atan2(body_dy, body_dx);
 
-          if (range < 0.5 || range > 20.0)
-            continue;
-
-          Eigen::Matrix2d C_odom;
-          C_odom << obs.covariance[0], obs.covariance[1],
-              obs.covariance[2], obs.covariance[3];
-
-          Eigen::Matrix2d R_body;
-          R_body << cos_yaw, sin_yaw,
-              -sin_yaw, cos_yaw;
-          Eigen::Matrix2d C_body = R_body * C_odom * R_body.transpose();
-
-          double r2 = range * range;
-          Eigen::Matrix2d J_br;
-          J_br << -body_dy / r2, body_dx / r2,
-              body_dx / range, body_dy / range;
-          Eigen::Matrix2d C_br = J_br * C_body * J_br.transpose();
-
-          constexpr double kMinBearingSigma = 0.01;
-          constexpr double kMinRangeSigma = 0.05;
-          double bearing_sigma = std::max(std::sqrt(std::abs(C_br(0, 0))), kMinBearingSigma);
-          double range_sigma = std::max(std::sqrt(std::abs(C_br(1, 1))), kMinRangeSigma);
-
-          auto obs_noise = gtsam::noiseModel::Diagonal::Sigmas(
-              (gtsam::Vector(2) << bearing_sigma, range_sigma).finished());
-
-          Symbol pose_key('x', keyframe_idx_);
-          Symbol landmark_key('l', obs.landmark_id);
-
-          new_factors_.add(
-              gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
-                  pose_key, landmark_key,
-                  gtsam::Rot2::fromAngle(bearing), range,
-                  obs_noise));
-
-          if (known_landmarks_.find(obs.landmark_id) == known_landmarks_.end())
+          for (const auto &[lm_id, obs_ptr] : latest_per_landmark)
           {
-            gtsam::Point2 lm_odom(obs.position.x, obs.position.y);
-            new_values_.insert(landmark_key, lm_odom);
-            known_landmarks_.insert(obs.landmark_id);
+            const auto &obs = *obs_ptr;
+            double dx_odom = obs.position.x - vio_pose2d.x();
+            double dy_odom = obs.position.y - vio_pose2d.y();
+            double body_dx = cos_yaw * dx_odom + sin_yaw * dy_odom;
+            double body_dy = -sin_yaw * dx_odom + cos_yaw * dy_odom;
+            double range = std::hypot(body_dx, body_dy);
+
+            if (range < 0.5 || range > 20.0)
+              continue;
+
+            double bearing = std::atan2(body_dy, body_dx);
+
+            Eigen::Matrix2d C_odom;
+            C_odom << obs.covariance[0], obs.covariance[1],
+                obs.covariance[2], obs.covariance[3];
+
+            Eigen::Matrix2d R_body;
+            R_body << cos_yaw, sin_yaw,
+                -sin_yaw, cos_yaw;
+            Eigen::Matrix2d C_body = R_body * C_odom * R_body.transpose();
+
+            double r2 = range * range;
+            Eigen::Matrix2d J_br;
+            J_br << -body_dy / r2, body_dx / r2,
+                body_dx / range, body_dy / range;
+            Eigen::Matrix2d C_br = J_br * C_body * J_br.transpose();
+
+            constexpr double kMinBearingSigma = 0.01;
+            constexpr double kMinRangeSigma = 0.05;
+            double bearing_sigma = std::max(std::sqrt(std::abs(C_br(0, 0))), kMinBearingSigma);
+            double range_sigma = std::max(std::sqrt(std::abs(C_br(1, 1))), kMinRangeSigma);
+
+            auto base_noise = gtsam::noiseModel::Diagonal::Sigmas(
+                (gtsam::Vector(2) << bearing_sigma, range_sigma).finished());
+            auto obs_noise = gtsam::noiseModel::Robust::Create(
+                gtsam::noiseModel::mEstimator::Huber::Create(1.345),
+                base_noise);
+
+            Symbol pose_key('x', keyframe_idx_);
+            Symbol landmark_key('l', obs.landmark_id);
+
+            new_factors.add(
+                gtsam::BearingRangeFactor<gtsam::Pose2, gtsam::Point2>(
+                    pose_key, landmark_key,
+                    gtsam::Rot2::fromAngle(bearing), range,
+                    obs_noise));
+            landmark_factors_added++;
+
+            if (known_landmarks_.find(obs.landmark_id) == known_landmarks_.end())
+            {
+              gtsam::Point2 lm_odom(obs.position.x, obs.position.y);
+              new_values.insert(landmark_key, lm_odom);
+              known_landmarks_.insert(obs.landmark_id);
+            }
           }
         }
         pending_observations_.clear();
       }
+      last_keyframe_landmark_count_ = available_landmark_count;
 
-      isam_->update(new_factors_, new_values_);
-      new_factors_.resize(0);
-      new_values_.clear();
+      if (enable_diagnostics_)
+      {
+        total_keyframes_++;
+        total_landmark_factors_ += landmark_factors_added;
+        if (landmark_factors_added > 0)
+          landmark_keyframes_++;
+        else if (sparse_mode_active_ && available_landmark_count > 0)
+          sparse_skipped_keyframes_++;
+        else
+          vio_only_keyframes_++;
+      }
 
-      current_estimate_ = isam_->calculateEstimate();
+      isam_->update(new_factors, new_values);
+
+      gtsam::Values estimate = isam_->calculateEstimate();
       gtsam::Pose2 corrected_pose2d =
-          current_estimate_.at<gtsam::Pose2>(Symbol('x', keyframe_idx_));
+          estimate.at<gtsam::Pose2>(Symbol('x', keyframe_idx_));
 
       last_keyframe_vio_pose2d_ = vio_pose2d;
       last_corrected_pose2d_ = corrected_pose2d;
       keyframe_idx_++;
 
       nav_msgs::msg::Odometry corrected_odom =
-          build_corrected_odom(corrected_pose2d, vio_base);
+          build_corrected_odom(corrected_pose2d, vio_base, vio_roll, vio_pitch);
       broadcast_odom_tf(corrected_odom);
       odom_pub_->publish(corrected_odom);
 
-      RCLCPP_DEBUG(get_logger(), "KF %d: vio(%.2f,%.2f) -> corr(%.2f,%.2f)  landmarks=%zu",
-                   keyframe_idx_ - 1, vio_pose2d.x(), vio_pose2d.y(),
-                   corrected_pose2d.x(), corrected_pose2d.y(), known_landmarks_.size());
+      RCLCPP_DEBUG(get_logger(),
+                   "KF %d: corr(%.2f,%.2f) yaw=%.1f deg  lm_kf=%d lm_total=%zu",
+                   keyframe_idx_ - 1,
+                   corrected_pose2d.x(), corrected_pose2d.y(),
+                   corrected_pose2d.theta() * 180.0 / M_PI,
+                   last_keyframe_landmark_count_, known_landmarks_.size());
+    }
+
+    void OdomRepublisher::update_fusion_diagnostics(
+        diagnostic_updater::DiagnosticStatusWrapper &stat)
+    {
+      double landmark_pct = (total_keyframes_ > 0)
+                                ? 100.0 * landmark_keyframes_ / total_keyframes_
+                                : 0.0;
+      double avg_lm_per_kf = (landmark_keyframes_ > 0)
+                                 ? static_cast<double>(total_landmark_factors_) / landmark_keyframes_
+                                 : 0.0;
+
+      stat.add("Total keyframes", total_keyframes_);
+      stat.add("Keyframes with landmarks", landmark_keyframes_);
+      stat.add("VIO-only keyframes", vio_only_keyframes_);
+      stat.add("Sparse-skipped keyframes", sparse_skipped_keyframes_);
+      stat.addf("Landmark keyframe %", "%.1f", landmark_pct);
+      stat.add("Total landmark factors", total_landmark_factors_);
+      stat.addf("Avg landmarks/keyframe (when present)", "%.1f", avg_lm_per_kf);
+      stat.add("Known landmarks", static_cast<int>(known_landmarks_.size()));
+      stat.add("Sparse mode active", sparse_mode_active_ ? "YES" : "NO");
+      stat.add("Last KF landmark count", last_keyframe_landmark_count_);
+
+      if (landmark_pct >= 50.0)
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK,
+                     "Landmark coverage: " + std::to_string(static_cast<int>(landmark_pct)) + "%");
+      else if (landmark_pct >= 20.0)
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN,
+                     "Low landmark coverage: " + std::to_string(static_cast<int>(landmark_pct)) + "%");
+      else
+        stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+                     "Very low landmark coverage: " + std::to_string(static_cast<int>(landmark_pct)) + "%");
     }
 
     nav_msgs::msg::Odometry OdomRepublisher::build_corrected_odom(
         const gtsam::Pose2 &corrected_pose2d,
-        const nav_msgs::msg::Odometry &vio_base)
+        const nav_msgs::msg::Odometry &vio_base,
+        double vio_roll, double vio_pitch)
     {
       nav_msgs::msg::Odometry out = vio_base;
       out.pose.pose.position.x = corrected_pose2d.x();
       out.pose.pose.position.y = corrected_pose2d.y();
 
-      Eigen::Quaterniond vio_q(
-          vio_base.pose.pose.orientation.w, vio_base.pose.pose.orientation.x,
-          vio_base.pose.pose.orientation.y, vio_base.pose.pose.orientation.z);
-      double r, p, y;
-      quat_to_rpy(vio_q, r, p, y);
-
       Eigen::Quaterniond corrected_q =
           Eigen::AngleAxisd(corrected_pose2d.theta(), Eigen::Vector3d::UnitZ()) *
-          Eigen::AngleAxisd(p, Eigen::Vector3d::UnitY()) *
-          Eigen::AngleAxisd(r, Eigen::Vector3d::UnitX());
+          Eigen::AngleAxisd(vio_pitch, Eigen::Vector3d::UnitY()) *
+          Eigen::AngleAxisd(vio_roll, Eigen::Vector3d::UnitX());
       corrected_q.normalize();
 
       out.pose.pose.orientation.w = corrected_q.w();

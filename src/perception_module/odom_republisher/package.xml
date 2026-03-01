@@ -19,6 +19,7 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>uosm_uav_interface</depend>
+  <depend>diagnostic_updater</depend>
   <depend>launch</depend>
   <depend>launch_ros</depend>
   <depend>ament_index_python</depend>

@@ -16,6 +16,9 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
@@ -29,6 +32,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/sam/BearingRangeFactor.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/NoiseModel.h>
 
 #include "uosm_uav_interface/msg/trunk_observation_array.hpp"
 #include "node_params.hpp"
@@ -36,6 +40,7 @@
 #include <array>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace uosm
@@ -70,10 +75,12 @@ namespace uosm
       void try_arm_isam2();
       void process_keyframe(
           const gtsam::Pose2 &vio_pose2d,
-          const nav_msgs::msg::Odometry &vio_base);
+          const nav_msgs::msg::Odometry &vio_base,
+          double vio_roll, double vio_pitch);
       nav_msgs::msg::Odometry build_corrected_odom(
           const gtsam::Pose2 &corrected_pose2d,
-          const nav_msgs::msg::Odometry &vio_base);
+          const nav_msgs::msg::Odometry &vio_base,
+          double vio_roll, double vio_pitch);
 
       bool static_transform_cached_{false};
       bool broadcast_tf_{true};
@@ -105,9 +112,6 @@ namespace uosm
       std::mutex obs_mutex_;
 
       std::unique_ptr<gtsam::ISAM2> isam_;
-      gtsam::NonlinearFactorGraph new_factors_;
-      gtsam::Values new_values_;
-      gtsam::Values current_estimate_;
 
       bool isam_initialized_{false};
       int keyframe_idx_{0};
@@ -119,6 +123,24 @@ namespace uosm
 
       double keyframe_dist_threshold_{0.15};
       double keyframe_yaw_threshold_{0.05};
+
+      // Sparse landmark handling
+      int sparse_landmark_threshold_{2};
+      int sparse_landmark_exit_threshold_{4};
+      double sparse_keyframe_scale_{0.5};
+      int last_keyframe_landmark_count_{0};
+      bool sparse_mode_active_{false};
+
+      // Diagnostics
+      bool enable_diagnostics_{false};
+      std::unique_ptr<diagnostic_updater::Updater> diag_updater_;
+      void update_fusion_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
+
+      int total_keyframes_{0};
+      int landmark_keyframes_{0};
+      int vio_only_keyframes_{0};
+      int sparse_skipped_keyframes_{0};
+      int total_landmark_factors_{0};
     };
 
   } // namespace perception
