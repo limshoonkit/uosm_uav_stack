@@ -45,7 +45,7 @@ def _launch_setup(context, *args, **kwargs):
     keyframe_yaw = float(
         LaunchConfiguration('keyframe_yaw_threshold').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
-    
+    pcd_z_offset = float(LaunchConfiguration('pcd_z_offset').perform(context))
 
     # ── package paths ──────────────────────────────────────────────────
     trunk_seg_dir = get_package_share_directory('trunk_segmentation')
@@ -55,18 +55,27 @@ def _launch_setup(context, *args, **kwargs):
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(
         map_align_dir, 'config', 'map_alignment_params.yaml')
+    # map_pcd_path = os.path.join(
+    #     map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
     map_pcd_path = os.path.join(
-        map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
+        map_align_dir, 'maps', 'zenxin', 'mosti_site.pcd')
 
     odom_repub_dir = get_package_share_directory('odom_republisher')
     odom_repub_config = os.path.join(
         odom_repub_dir, 'config', 'odom_republisher_params.yaml')
+
+    map_proc_dir = get_package_share_directory('map_processor')
+    map_proc_config = os.path.join(
+        map_proc_dir, 'config', 'map_processor_params.yaml')
+    map_proc_pcd_path = os.path.join(
+        map_proc_dir, 'maps', 'zenxin', 'mosti_site.pcd')
 
     robot_viewer_dir = get_package_share_directory('uosm_robot_viewer')
     urdf_xacro_path = os.path.join(
         robot_viewer_dir, 'urdf', 'uosm_uav_platform.urdf.xacro')
 
     bringup_dir = get_package_share_directory('uosm_uav_bringup')
+    planner_config = os.path.join(bringup_dir, 'config', 'planner.yaml')
     rviz_config = os.path.join(bringup_dir, 'config', 'rviz', 'landmark_fusion_bag_test.rviz')
 
     # ── composable nodes ───────────────────────────────────────────────
@@ -103,6 +112,28 @@ def _launch_setup(context, *args, **kwargs):
             ('alignment_done', '/map_alignment/alignment_done'),
             ('alignment_transform', '/map_alignment/alignment_transform'),
         ],
+    )
+
+    # Ego planner (passive — grid map only)
+    planner_component = ComposableNode(
+        package='planner_manager',
+        plugin='uosm::path_planning::EgoPlanner',
+        name='ego_planner_node',
+        namespace='',
+        parameters=[
+            {'planner.waypoint_csv_file_path': ''},  # no auto
+            {'use_sim_time': True},
+            {'grid_map.is_sim': False},  # use real point cloud callback path
+            planner_config,
+        ],
+        remappings=[
+            ('odometry', '/mavros/odometry/out'),
+            ('grid_map/cloud', '/zed_node/point_cloud/cloud_registered'),  # disabled: LiDAR-only test
+            ('grid_map/scan', '/scan'),
+            ('alignment_done', '/map_alignment/alignment_done'),
+            ('alignment_transform', '/map_alignment/alignment_transform'),
+        ],
+        extra_arguments=[{'use_intra_process_comms': True}],
     )
 
     odom_repub = ComposableNode(
@@ -149,8 +180,28 @@ def _launch_setup(context, *args, **kwargs):
         composable_node_descriptions=[
             trunk_seg,
             map_align,
+            planner_component,
             odom_repub,
             rsp,
+        ],
+    )
+
+    # ── map processor — reference PCD map display ──────────────────────
+    map_processor = Node(
+        package='map_processor',
+        executable='map_processor_node',
+        name='map_processor_node',
+        namespace='',
+        output='screen',
+        emulate_tty=True,
+        parameters=[
+            {'pcd_file_path': map_proc_pcd_path},
+            {'starting_point.z': pcd_z_offset},
+            {'use_sim_time': True},
+            map_proc_config,
+        ],
+        remappings=[
+            ('global_cloud', '/map_generator/global_cloud'),
         ],
     )
 
@@ -266,6 +317,7 @@ def _launch_setup(context, *args, **kwargs):
 
     return [
         container,
+        map_processor,
         raw_viz,
         corrected_viz,
         odom_tf,
@@ -280,7 +332,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'bag_path',
-            default_value='./bags/real/klk/test_manual_1_decoded',
+            # default_value='./bags/real/klk/test_manual_1_decoded',
+            default_value='./bags/real/zenxin/tri_tree_manual_flight_decoded',
             description='Path to the rosbag to play',
         ),
         DeclareLaunchArgument(
@@ -306,8 +359,16 @@ def generate_launch_description():
             description='Record fusion results to a bag',
         ),
         DeclareLaunchArgument(
-            'record_path', default_value='./bags/real/klk/test_manual_1_corrected',
+            'record_path',
+            # default_value='./bags/real/klk/test_manual_1_corrected', 
+            default_value='./bags/real/zenxin/tri_tree_manual_flight_corrected',
             description='Output path for the recorded bag',
+        ),
+
+        # ── PCD map display ─────────────────────────────────────────────
+        DeclareLaunchArgument(
+            'pcd_z_offset', default_value='0.0',
+            description='Vertical offset to lower/raise the PCD map (starting_point.z)',
         ),
 
         # ── iSAM2 tuning (override from CLI) ──────────────────────────

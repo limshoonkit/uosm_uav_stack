@@ -2,9 +2,9 @@
 map_processor_node:
   ros__parameters:
     voxel_leaf_size: 0.1
-    starting_point:
-      x: 0.05
-      y: -4.70
+    starting_point:    #  MOSTI , KLK
+      x: -5.00         # -5.00 , 0.05
+      y: -6.00         # -6.00 , -4.70
       z: 2.0
     map_bounds:
       min_x: -80.0
