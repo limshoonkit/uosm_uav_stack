@@ -55,10 +55,10 @@ def _launch_setup(context, *args, **kwargs):
     map_align_dir = get_package_share_directory('map_alignment')
     map_align_config = os.path.join(
         map_align_dir, 'config', 'map_alignment_params.yaml')
-    # map_pcd_path = os.path.join(
-    #     map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
     map_pcd_path = os.path.join(
-        map_align_dir, 'maps', 'zenxin', 'mosti_site.pcd')
+        map_align_dir, 'maps', 'klk', 'tuanmee_site.pcd')
+    # map_pcd_path = os.path.join(
+    #     map_align_dir, 'maps', 'zenxin', 'mosti_site.pcd')
 
     odom_repub_dir = get_package_share_directory('odom_republisher')
     odom_repub_config = os.path.join(
@@ -68,7 +68,9 @@ def _launch_setup(context, *args, **kwargs):
     map_proc_config = os.path.join(
         map_proc_dir, 'config', 'map_processor_params.yaml')
     map_proc_pcd_path = os.path.join(
-        map_proc_dir, 'maps', 'zenxin', 'mosti_site.pcd')
+        map_proc_dir, 'maps', 'klk', 'tuanmee_site.pcd')
+    # map_proc_pcd_path = os.path.join(
+    #     map_proc_dir, 'maps', 'zenxin', 'mosti_site.pcd')
 
     robot_viewer_dir = get_package_share_directory('uosm_robot_viewer')
     urdf_xacro_path = os.path.join(
@@ -332,8 +334,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'bag_path',
-            # default_value='./bags/real/klk/test_manual_1_decoded',
-            default_value='./bags/real/zenxin/tri_tree_manual_flight_decoded',
+            default_value='./bags/real/klk/test_manual_1_decoded',
+            # default_value='./bags/real/zenxin/tri_tree_manual_flight_decoded',
             description='Path to the rosbag to play',
         ),
         DeclareLaunchArgument(
@@ -360,8 +362,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'record_path',
-            # default_value='./bags/real/klk/test_manual_1_corrected', 
-            default_value='./bags/real/zenxin/tri_tree_manual_flight_corrected',
+            default_value='./bags/real/klk/test_manual_1_fusion_diag',
+            # default_value='./bags/real/zenxin/tri_tree_manual_flight_fusion_diag',
             description='Output path for the recorded bag',
         ),
 

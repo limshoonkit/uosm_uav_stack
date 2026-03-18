@@ -2,8 +2,10 @@ build/
 install/
 log/
 bags/
+bags.zip
 __pycache__/
 *.pyc
+Paper/
 
 acados_generated/
 

@@ -41,10 +41,10 @@ def _launch_setup(context, *args, **kwargs):
     map_proc_dir = get_package_share_directory('map_processor')
     map_proc_config = os.path.join(
         map_proc_dir, 'config', 'map_processor_params.yaml')
-    # map_proc_pcd_path = os.path.join(
-    #     map_proc_dir, 'maps', 'klk', 'tuanmee_site.pcd')
     map_proc_pcd_path = os.path.join(
-        map_proc_dir, 'maps', 'zenxin', 'mosti_site.pcd')
+        map_proc_dir, 'maps', 'klk', 'tuanmee_site.pcd')
+    # map_proc_pcd_path = os.path.join(
+    #     map_proc_dir, 'maps', 'zenxin', 'mosti_site.pcd')
 
     # ── composable nodes ───────────────────────────────────────────────
 
@@ -245,8 +245,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'bag_path',
-            # default_value='./bags/real/klk/test_manual_1_corrected',
-            default_value='./bags/real/zenxin/tri_tree_manual_flight_corrected',
+            default_value='./bags/real/klk/test_manual_1_corrected',
+            # default_value='./bags/real/zenxin/tri_tree_manual_flight_corrected',
             description='Path to the recorded fusion bag',
         ),
         DeclareLaunchArgument(
